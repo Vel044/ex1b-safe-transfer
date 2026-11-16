@@ -42,7 +42,8 @@ def frame(title,lines,footer,duration):
     draw.rounded_rectangle((32,125,1248,774),radius=12,fill="#181b20")
     wrapped=[]
     for text in lines:
-        wrapped+=wrap(ANSI.sub("",text).replace("\t","    "),regular,1150)
+        for logical in ANSI.sub("",text).replace("\t","    ").splitlines() or [""]:
+            wrapped+=wrap(logical,regular,1150)
     y=146
     for line in wrapped[-22:]:
         draw.text((56,y),line,font=regular,fill="#eff1f4");y+=27
