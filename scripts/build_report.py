@@ -240,7 +240,7 @@ def build(args):
     r.text("实现覆盖多用户并发、完整文件传输、连接保持、自定义应用层协议和受限目录访问；同时支持断点续传、公钥证书身份认证、多文件同时上传下载、按用户身份限速，并扩展到文件夹递归传输及空目录保留。")
     r.sub("主要验证结果")
     r.table(["验证对象", "本次结果"], [
-        ["自动化检查", f"Python {total}项、Swift {args.swift_tests}项，全部通过"],
+        ["自动化检查", f"共{total+args.swift_tests}项：Python {total}项、Swift {args.swift_tests}项，全部通过"],
         ["跨语言文件夹往返", f"Swift客户端与Linux容器服务端完成{smoke['files_and_directories']}个目录及文件任务"],
         ["原生界面", "系统目录授权；8项文件夹往返及64MiB文件上传，共9项成功"],
         ["两端重启续传", f"独立客户端退出且容器服务端重启后，从{args.resume_offset}字节检查点恢复"],
@@ -385,7 +385,7 @@ def build(args):
         ("recv", "READY(offset,sha256)"),
         ("send", "READ(id,offset) 继续下载"),
     ], row=29)
-    r.text("下载以客户端检查点为准，允许恢复最后一个客户端ACK丢失的情形。已完成任务返回原RESULT。上传提交时，若正式链接已创建而数据库结果尚未提交，服务端通过文件身份或相同inode识别上次提交；不同文件的同名冲突仍拒绝覆盖。", size=10, leading=16)
+    r.text("下载以客户端检查点为准，允许恢复最后一个客户端ACK丢失的情形。已完成任务返回原RESULT。正式链接已创建而临时链接未清理时，两端先核对文件身份及相同inode，再恢复上次提交；客户端下载路径在检查点准备前处理此窗口，不同文件的同名冲突仍拒绝覆盖。", size=10, leading=16)
     r.text(f"本次独立进程验证：4MiB文件在{args.resume_offset}字节处暂停；客户端退出、容器服务重启后，新客户端从该检查点继续至4194304字节并完成校验。", size=10, leading=16)
 
     r.new_page("取消 心跳与错误处理", "6")
@@ -428,7 +428,7 @@ def build(args):
     r.text("容器内实测为普通用户，向业务卷外创建文件被只读文件系统拒绝。初始化容器只短时调整项目挂载目录权限，不运行网络服务。连接限制、超时及限速能减轻应用资源耗尽，不能阻止上游网络带宽被占满；本实验未验证互联网规模DDoS。未建设OCSP或CRL，账户禁用及证书指纹登记承担实验客户端撤销控制。", size=10, leading=16)
 
     r.new_page("测试设计与实测结果", "8")
-    r.text(f"本次自动化证据包含{total}项Python测试和{args.swift_tests}项Swift测试，全部通过。Python覆盖服务端行为及安全异常；Swift覆盖分帧、共享样例、安全落盘与任务恢复；TransferProbe直接复用正式Swift传输核心进行跨语言验证。", size=10.5, leading=17)
+    r.text(f"本次自动化证据合计{total+args.swift_tests}项，包含{total}项Python测试和{args.swift_tests}项Swift测试，全部通过。Python覆盖服务端行为及安全异常；Swift覆盖分帧、共享样例、安全落盘、任务恢复及提交后临时链接未清理的恢复窗口；TransferProbe复用正式Swift传输核心进行跨语言验证。", size=10.5, leading=17)
     r.table(["场景组", "检查重点", "结果"], [
         ["协议边界", "共享样例 拆包 粘包 超长报文 半包超时", "通过"],
         ["完整传输", "空文件 小文件 二进制跨块 中文路径及连接复用", "通过"],
@@ -485,7 +485,7 @@ if __name__ == "__main__":
     parser.add_argument("--student-id", required=True)
     parser.add_argument("--screenshot", type=Path)
     parser.add_argument("--output", type=Path)
-    parser.add_argument("--swift-tests", type=int, default=5)
+    parser.add_argument("--swift-tests", type=int, default=6)
     parser.add_argument("--resume-offset", type=int, default=131072)
     parser.add_argument("--rate-seconds", type=float, default=3.915)
     arguments=parser.parse_args()

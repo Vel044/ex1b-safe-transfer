@@ -287,7 +287,7 @@ struct ConnectionSheet:View{
     @State private var error=""
     @State private var scopes:[URL]=[]
     @State private var identityReference=UserDefaults.standard.data(forKey:"identityReference")
-    @State private var rememberIdentity=true
+    @State private var rememberIdentity=false
     var body:some View{
         VStack(alignment:.leading,spacing:16){
             Label("连接安全文件服务器",systemImage:"lock.shield").font(.title2)
@@ -309,7 +309,7 @@ struct ConnectionSheet:View{
                 Button("连接"){connect()}.keyboardShortcut(.defaultAction).disabled(busy || ca == nil || (identityReference == nil && (identity == nil || password.isEmpty)))
             }
         }.padding(24).frame(width:490)
-        .onAppear{restore("caBookmark",false);restore("identityBookmark",true)}
+        .onAppear{if #unavailable(macOS 15.0){rememberIdentity=true};restore("caBookmark",false);restore("identityBookmark",true)}
     }
     private func restore(_ key:String,_ identityFile:Bool){
         guard let data=UserDefaults.standard.data(forKey:key) else{return};var stale=false

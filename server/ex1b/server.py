@@ -7,6 +7,7 @@ import logging.handlers
 import os
 import re
 import socket
+import signal
 import ssl
 import time
 import uuid
@@ -434,8 +435,12 @@ class Session:
 async def serve(config):
     server = Server(config)
     await server.start()
+    stop = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for name in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(name, stop.set)
     print(f"安全文件服务器已启动 {config.get('host','127.0.0.1')}:{server.port}",flush=True)
     try:
-        await asyncio.Future()
+        await stop.wait()
     finally:
         await server.close()

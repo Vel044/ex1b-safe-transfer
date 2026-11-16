@@ -19,7 +19,7 @@ open build/安传.app
 
 也可本机调试服务端：先停止占用8443端口的容器，再运行`.venv/bin/ex1b server --config runtime/server.json`。修改服务端源码后重新安装，或使用`PYTHONPATH=server .venv/bin/python -m ex1b.cli ...`。
 
-客户端选择`localhost:8443`、`runtime/certs/ca.pem`及`alice.p12`或`bob.p12`，输入相应`.password`文件内的P12密码。通过系统选择器授权本地目录，多选文件或目录后上传、下载。可将身份保存到系统钥匙串；配置只存身份引用。实验CA不会安装为系统全局根证书。
+客户端选择`localhost:8443`、`runtime/certs/ca.pem`及`alice.p12`或`bob.p12`，输入相应`.password`文件内的P12密码。通过系统选择器授权本地目录，多选文件或目录后上传、下载。macOS 15以上默认只在本次连接加载身份，可选保存到系统钥匙串；macOS 14使用钥匙串导入。配置只存身份引用或文件书签。实验CA不会安装为系统全局根证书。本地临时签名的应用更新后，旧钥匙串身份可能需要重新授权，可选择会话内P12模式。
 
 Alice默认2MiB/s，Bob默认512KiB/s，上传和下载共用该账户全部连接的带宽预算。单文件上限1GiB、账户配额2GiB、四文件并发。同名文件拒绝覆盖，需改名后重新添加。远端同名目录可合并。符号链接不参与传输。
 
