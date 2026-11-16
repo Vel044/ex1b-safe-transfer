@@ -1,5 +1,7 @@
+name: ex1b-safe-transfer
 services:
   server:
+    image: ex1b-safe-transfer:local
     build:
       context: .
       dockerfile: deploy/Dockerfile
@@ -22,4 +24,10 @@ services:
       - ./runtime/container-data:/data
       - ./runtime/server-certs:/certs:ro
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',8443),2); s.close()"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     stop_grace_period: 20s

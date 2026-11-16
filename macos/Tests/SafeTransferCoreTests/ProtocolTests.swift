@@ -2,6 +2,30 @@ import XCTest
 @testable import SafeTransferCore
 
 final class ProtocolTests:XCTestCase {
+    func testRecoverCommitBeforeTemporaryUnlink()throws{
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+        defer{try? FileManager.default.removeItem(at:root)}
+        _ = try Disk.prepare(root:root,temporary:"part",offset:0)
+        try Disk.write(root:root,path:"part",offset:0,data:Data("abc".utf8))
+        try FileManager.default.linkItem(at:root.appendingPathComponent("part"),to:root.appendingPathComponent("final"))
+        let hash="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        XCTAssertTrue(try Disk.recoverCommitted(root:root,temporary:"part",destination:"final",size:3,sha256:hash))
+        XCTAssertFalse(try Disk.exists(root:root,path:"part"))
+        XCTAssertEqual(try Disk.identity(root:root,path:"final").1,hash)
+    }
+    func testSharedPythonFixtures() throws {
+        struct Fixture:Decodable { var kind:UInt8;var request:UInt32;var meta:[String:WireValue];var payload_hex:String;var wire_hex:String }
+        let root=URL(fileURLWithPath:#filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let fixtures=try JSONDecoder().decode([Fixture].self,from:Data(contentsOf:root.appendingPathComponent("fixtures/protocol.json")))
+        func hex(_ string:String)->Data { var data=Data();var i=string.startIndex;while i<string.endIndex{let end=string.index(i,offsetBy:2);data.append(UInt8(string[i..<end],radix:16)!);i=end};return data }
+        for fixture in fixtures {
+            var decoder=PacketDecoder()
+            let packet=try XCTUnwrap(decoder.append(hex(fixture.wire_hex)).first)
+            XCTAssertEqual(packet.kind.rawValue,fixture.kind);XCTAssertEqual(packet.request,fixture.request)
+            XCTAssertEqual(packet.meta,fixture.meta);XCTAssertEqual(packet.payload,hex(fixture.payload_hex))
+        }
+    }
     func testSplitAndCombinedFrames() throws {
         let original=Packet(.data,request:0x10203040,meta:["name":.string("中文"),"offset":.integer(42)],payload:Data([0,1,255]))
         let bytes=try original.encode()

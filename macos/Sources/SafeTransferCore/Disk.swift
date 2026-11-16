@@ -141,9 +141,41 @@ public enum Disk {
         let source = try segments(temporary), target = try segments(destination)
         try withDirectory(root:root,pieces:Array(source.dropLast())) { sourceFD in
             try withDirectory(root:root,pieces:Array(target.dropLast())) { targetFD in
-                guard linkat(sourceFD,source.last!,targetFD,target.last!,0) == 0 else { throw failure("提交文件") }
+                if linkat(sourceFD,source.last!,targetFD,target.last!,0) != 0 {
+                    guard errno == EEXIST else { throw failure("提交文件") }
+                    var sourceInfo=stat(),targetInfo=stat()
+                    guard fstatat(sourceFD,source.last!,&sourceInfo,AT_SYMLINK_NOFOLLOW) == 0,
+                          fstatat(targetFD,target.last!,&targetInfo,AT_SYMLINK_NOFOLLOW) == 0,
+                          sourceInfo.st_dev == targetInfo.st_dev,sourceInfo.st_ino == targetInfo.st_ino else {
+                        throw TransferFault("CONFLICT","已有同名文件，请改名后重试")
+                    }
+                }
                 guard fsync(targetFD) == 0 else { throw failure("同步目录") }
                 guard unlinkat(sourceFD,source.last!,0) == 0 else { throw failure("清理临时文件") }
+            }
+        }
+    }
+
+    /// Recover only the exact hard link created by our interrupted commit.
+    public static func recoverCommitted(root:URL,temporary:String,destination:String,size:Int64,sha256:String)throws->Bool {
+        let source=try segments(temporary),target=try segments(destination)
+        return try withDirectory(root:root,pieces:Array(source.dropLast())) { sourceFD in
+            try withDirectory(root:root,pieces:Array(target.dropLast())) { targetFD in
+                var a=stat(),b=stat()
+                if fstatat(sourceFD,source.last!,&a,AT_SYMLINK_NOFOLLOW) != 0 {
+                    if errno == ENOENT{return false};throw failure("检查临时文件")
+                }
+                if fstatat(targetFD,target.last!,&b,AT_SYMLINK_NOFOLLOW) != 0 {
+                    if errno == ENOENT{return false};throw failure("检查目标文件")
+                }
+                guard a.st_dev == b.st_dev,a.st_ino == b.st_ino else{return false}
+                guard a.st_mode & S_IFMT == S_IFREG,a.st_nlink == 2,a.st_size == size else{throw TransferFault("INTEGRITY","本地提交恢复状态无效")}
+                let fd=openat(sourceFD,source.last!,O_RDONLY|O_NOFOLLOW)
+                guard fd >= 0 else{throw failure("检查已提交文件")}
+                defer{Darwin.close(fd)}
+                guard try hashFD(fd) == sha256 else{throw TransferFault("INTEGRITY","已提交文件哈希不符")}
+                guard unlinkat(sourceFD,source.last!,0) == 0,fsync(sourceFD) == 0 else{throw failure("恢复提交")}
+                return true
             }
         }
     }

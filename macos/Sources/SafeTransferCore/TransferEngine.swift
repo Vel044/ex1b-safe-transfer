@@ -17,6 +17,8 @@ public struct SessionSnapshot: Sendable {
     public var user = ""
     public var bandwidth: Int64 = 0
     public var detail = "尚未连接"
+    public var heartbeats = 0
+    public var connectionID = ""
     public init() {}
 }
 
@@ -56,6 +58,8 @@ public actor TransferEngine {
         state.user = try welcome.meta.text("user")
         state.bandwidth = try welcome.meta.integer("bandwidth")
         state.detail = "双向证书已验证"
+        state.connectionID = UUID().uuidString
+        state.heartbeats = 0
         let ca = try Data(contentsOf:values.ca)
         endpoint = "\(values.host):\(values.port):" + SHA256.hash(data:ca).map { String(format:"%02x",$0) }.joined()
         heartbeat?.cancel()
@@ -85,6 +89,7 @@ public actor TransferEngine {
         guard state.connected else { return }
         do {
             let response = try await call(.ping)
+            state.heartbeats += 1
             if let rate = response.meta["bandwidth"]?.int { state.bandwidth = rate }
         } catch { await lost(error) }
     }
@@ -187,7 +192,7 @@ public actor TransferEngine {
             _ = try Disk.segments(local); _ = try Disk.segments(remote)
             guard values.count < 10000 else { throw TransferFault("LIMIT","文件夹超过10000个条目") }
             var task = base(root:root,bookmark:bookmark,group:group,title:title,direction:"download")
-            task.localPath = local; task.remotePath = remote; task.size = entry.size; task.directory = entry.directory
+            task.localPath = local; task.remotePath = remote; task.size = entry.directory ? 0 : entry.size; task.directory = entry.directory
             task.created += Double(values.count)/100000; values.append(task)
         }
         var queue:[(RemoteEntry,String,String)] = entries.map { ($0,$0.name,Self.join(remoteDirectory,$0.name)) }
@@ -328,6 +333,11 @@ public actor TransferEngine {
             _ = try await disk.run { try Disk.prepare(root:root,temporary:temporary,offset:0) }
         } else {
             // A crash after rename but before the local database commit is recoverable.
+            let expectedSize=task.size,expectedHash=task.sha256
+            if try await disk.run({try Disk.recoverCommitted(root:root,temporary:temporary,destination:local,size:expectedSize,sha256:expectedHash)}) {
+                _ = try await call(.finish,meta:["id":.string(task.id),"sha256":.string(task.sha256)])
+                task.offset=task.size;task.status="complete";task.detail="已恢复本地原子提交";try await store.save(task);return
+            }
             if try await disk.run({ try Disk.exists(root:root,path:local) }),
                !(try await disk.run({ try Disk.exists(root:root,path:temporary) })) {
                 let (size,digest) = try await disk.run { try Disk.identity(root:root,path:local) }

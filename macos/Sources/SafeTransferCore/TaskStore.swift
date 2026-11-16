@@ -23,7 +23,7 @@ public struct TransferSnapshot: Codable, Identifiable, Sendable, Equatable {
     public var created = Date().timeIntervalSince1970
     public init() {}
     public var title: String { remotePath.components(separatedBy:"/").last ?? remotePath }
-    public var progress: Double { size > 0 ? Double(offset)/Double(size) : (status == "complete" ? 1 : 0) }
+    public var progress: Double { status == "complete" ? 1 : (size > 0 ? Double(offset)/Double(size) : 0) }
     public var statusText: String {
         ["queued":"排队中","preparing":"校验中","transferring":"传输中","paused":"已暂停","waiting":"等待连接","complete":"已完成","failed":"失败","cancelled":"已取消","cancelling":"取消待同步"][status] ?? status
     }
@@ -39,9 +39,11 @@ final class PersistedTransfer {
 public actor TaskStore {
     private let container: ModelContainer
     private let context: ModelContext
-    public init(inMemory:Bool = false) throws {
+    public init(inMemory:Bool = false, location:URL? = nil) throws {
         let schema = Schema([PersistedTransfer.self])
-        let configuration = ModelConfiguration(schema:schema,isStoredInMemoryOnly:inMemory)
+        let configuration:ModelConfiguration
+        if let location { configuration = ModelConfiguration(schema:schema,url:location) }
+        else { configuration = ModelConfiguration(schema:schema,isStoredInMemoryOnly:inMemory) }
         container = try ModelContainer(for:schema,configurations:[configuration])
         context = ModelContext(container)
         context.autosaveEnabled = false

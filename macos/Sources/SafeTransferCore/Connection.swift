@@ -8,8 +8,10 @@ public struct Credentials: Sendable {
     public var ca: URL
     public var identity: URL
     public var password: String
-    public init(host: String, port: UInt16, ca: URL, identity: URL, password: String) {
+    public var identityReference: Data?
+    public init(host: String, port: UInt16, ca: URL, identity: URL, password: String, identityReference:Data? = nil) {
         self.host = host; self.port = port; self.ca = ca; self.identity = identity; self.password = password
+        self.identityReference = identityReference
     }
 }
 
@@ -42,6 +44,9 @@ public final class SecureConnection: @unchecked Sendable {
                         self.ready?.resume(); self.ready = nil
                         self.receive()
                     case .failed(let error):
+                        if case .tls = error { self.fail(TransferFault("TLS",error.localizedDescription)) }
+                        else { self.fail(TransferFault("NETWORK",error.localizedDescription)) }
+                    case .waiting(let error):
                         if case .tls = error { self.fail(TransferFault("TLS",error.localizedDescription)) }
                         else { self.fail(TransferFault("NETWORK",error.localizedDescription)) }
                     case .cancelled: self.fail(TransferFault("DISCONNECTED","连接已关闭"))
@@ -144,15 +149,9 @@ public final class SecureConnection: @unchecked Sendable {
             der = decoded
         } else { der = caData }
         guard let anchor = SecCertificateCreateWithData(nil,der as CFData) else { throw TransferFault("CERT","无法读取CA证书") }
-        var items: CFArray?
-        var importOptions: [String:Any] = [kSecImportExportPassphrase as String:credentials.password]
-        if #available(macOS 15.0, *) { importOptions[kSecImportToMemoryOnly as String] = true }
-        let status = SecPKCS12Import(try Data(contentsOf:credentials.identity) as CFData,importOptions as CFDictionary,&items)
-        guard status == errSecSuccess, let first = (items as? [[String:Any]])?.first,
-              let rawIdentity = first[kSecImportItemIdentity as String] else {
-            throw TransferFault("CERT","客户端身份读取失败，请检查P12文件及密码（\(status)）")
-        }
-        let identity = rawIdentity as! SecIdentity
+        let identity:SecIdentity
+        if let reference = credentials.identityReference { identity = try IdentityVault.load(reference) }
+        else { identity = try IdentityVault.decode(credentials.identity,password:credentials.password) }
         guard let local = sec_identity_create(identity) else { throw TransferFault("CERT","无法加载客户端身份") }
         let tls = NWProtocolTLS.Options()
         sec_protocol_options_set_min_tls_protocol_version(tls.securityProtocolOptions,.TLSv12)
@@ -172,5 +171,33 @@ public final class SecureConnection: @unchecked Sendable {
         tcp.keepaliveIdle = 30; tcp.keepaliveInterval = 10; tcp.keepaliveCount = 3
         tcp.noDelay = true; tcp.connectionTimeout = 10
         return NWParameters(tls:tls,tcp:tcp)
+    }
+}
+
+public enum IdentityVault {
+    public static func decode(_ url:URL,password:String,persist:Bool = false) throws -> SecIdentity {
+        if #unavailable(macOS 15.0), !persist { throw TransferFault("KEYCHAIN","macOS 14请将身份保存到系统钥匙串后连接") }
+        var items:CFArray?
+        var options:[String:Any] = [kSecImportExportPassphrase as String:password]
+        if #available(macOS 15.0,*), !persist { options[kSecImportToMemoryOnly as String]=true }
+        let status=SecPKCS12Import(try Data(contentsOf:url) as CFData,options as CFDictionary,&items)
+        guard status == errSecSuccess,let first=(items as? [[String:Any]])?.first,let raw=first[kSecImportItemIdentity as String] else {
+            throw TransferFault("CERT","客户端身份读取失败，请检查P12及密码（\(status)）")
+        }
+        return raw as! SecIdentity
+    }
+    public static func save(_ url:URL,password:String) throws -> Data {
+        let identity=try decode(url,password:password,persist:true)
+        var result:CFTypeRef?
+        let query:[String:Any]=[kSecClass as String:kSecClassIdentity,kSecMatchItemList as String:[identity],kSecReturnPersistentRef as String:true]
+        let status=SecItemCopyMatching(query as CFDictionary,&result)
+        guard status == errSecSuccess,let reference=result as? Data else { throw TransferFault("KEYCHAIN","身份保存失败（\(status)），可关闭保存选项后连接") }
+        return reference
+    }
+    public static func load(_ reference:Data) throws -> SecIdentity {
+        var result:CFTypeRef?
+        let status=SecItemCopyMatching([kSecClass:kSecClassIdentity,kSecMatchItemList:[reference],kSecReturnRef:true] as CFDictionary,&result)
+        guard status == errSecSuccess,let raw=result else { throw TransferFault("KEYCHAIN","钥匙串身份不可用，请重新导入（\(status)）") }
+        return raw as! SecIdentity
     }
 }

@@ -14,6 +14,15 @@ struct SafeTransferApplication: App {
                     Button("连接服务器…"){model.showConnection=true}.keyboardShortcut("k")
                 }
                 CommandGroup(after:.toolbar) { Button("刷新文件列表"){model.refresh()}.keyboardShortcut("r") }
+                #if DEBUG
+                CommandMenu("开发验证") {
+                    if #available(macOS 15.0,*) {
+                        Button("导出当前窗口…") { DemoCapture.shared.report={model.notice=$0};DemoCapture.shared.begin(recording:false) }
+                        Button("录制当前窗口…") { DemoCapture.shared.report={model.notice=$0};DemoCapture.shared.begin(recording:true) }
+                        Button("停止窗口录制") { DemoCapture.shared.stop() }
+                    }
+                }
+                #endif
             }
         Settings {
             Form {
@@ -25,6 +34,16 @@ struct SafeTransferApplication: App {
             }.formStyle(.grouped).padding().frame(width:480)
         }
     }
+    #if DEBUG
+    private func exportWindow() {
+        guard let view=NSApp.windows.first(where:{$0.isVisible && $0.title == "安传"})?.contentView,
+              let bitmap=view.bitmapImageRepForCachingDisplay(in:view.bounds) else{return}
+        let panel=NSSavePanel();panel.nameFieldStringValue="安传界面.png"
+        guard panel.runModal() == .OK,let destination=panel.url else{return}
+        view.cacheDisplay(in:view.bounds,to:bitmap)
+        do{try bitmap.representation(using:.png,properties:[:])?.write(to:destination)}catch{model.errorText=error.localizedDescription}
+    }
+    #endif
 }
 
 struct FileRow:Identifiable,Sendable {
@@ -48,6 +67,9 @@ struct FileRow:Identifiable,Sendable {
     @Published var errorText:String?
     @Published var notice="选择本地目录并连接服务器，即可开始传输"
     @Published var working=false
+    @Published var localSort=[KeyPathComparator(\FileRow.name)]
+    @Published var remoteSort=[KeyPathComparator(\FileRow.name)]
+    @Published var failuresOnly=false
     let engine:TransferEngine
     let disk=DiskWorker()
     private var scopes:[URL]=[]
@@ -118,8 +140,9 @@ struct FileRow:Identifiable,Sendable {
         else{remotePath=remotePath.components(separatedBy:"/").dropLast().joined(separator:"/");remoteSelection=[];Task{await refreshRemote()}}
     }
     func connect(_ credentials:Credentials,scopes:[URL])async throws{
+        try await engine.connect(credentials)
         for url in self.scopes{url.stopAccessingSecurityScopedResource()};self.scopes=scopes
-        try await engine.connect(credentials);session=await engine.session();remotePath="";remoteSelection=[]
+        session=await engine.session();remotePath="";remoteSelection=[]
         await refreshRemote();notice="已连接为 \(session.user)，可多选文件或文件夹上传下载"
     }
     func disconnect(){Task{await engine.disconnect();session=await engine.session();remote=[]}}
@@ -163,8 +186,8 @@ struct MainWindow:View {
     var body:some View {
         VStack(spacing:0){
             VSplitView{
-                HSplitView{filePane(true).frame(minWidth:320);filePane(false).frame(minWidth:320)}.frame(minHeight:280)
-                queue.frame(minHeight:170,idealHeight:250)
+                HSplitView{filePane(true).frame(minWidth:320);filePane(false).frame(minWidth:320)}.frame(minHeight:280,idealHeight:400)
+                queue.frame(minHeight:220,idealHeight:300)
             }
             Divider()
             HStack(spacing:12){
@@ -203,10 +226,10 @@ struct MainWindow:View {
             }else if !local && !model.session.connected{
                 ContentUnavailableView{Label("尚未连接",systemImage:"server.rack")}description:{Text("使用证书连接安全文件服务器")}actions:{Button("连接服务器…"){model.showConnection=true}}
             }else{
-                Table(local ? model.local : model.remote,selection:local ? $model.localSelection : $model.remoteSelection){
-                    TableColumn("名称"){row in Label(row.name,systemImage:row.directory ? "folder.fill" : "doc").foregroundStyle(row.directory ? Color.accentColor : Color.primary)}.width(min:140,ideal:240)
-                    TableColumn("大小"){Text($0.sizeText).monospacedDigit()}.width(min:65,ideal:80)
-                    TableColumn("修改时间"){Text($0.modified,format:.dateTime.month().day().hour().minute()).foregroundStyle(.secondary)}.width(min:100,ideal:125)
+                Table((local ? model.local : model.remote).sorted(using:local ? model.localSort : model.remoteSort),selection:local ? $model.localSelection : $model.remoteSelection,sortOrder:local ? $model.localSort : $model.remoteSort){
+                    TableColumn("名称",value:\.name){row in Label(row.name,systemImage:row.directory ? "folder.fill" : "doc").foregroundStyle(row.directory ? Color.accentColor : Color.primary)}.width(min:140,ideal:240)
+                    TableColumn("大小",value:\.size){Text($0.sizeText).monospacedDigit()}.width(min:65,ideal:80)
+                    TableColumn("修改时间",value:\.modified){Text($0.modified,format:.dateTime.month().day().hour().minute()).foregroundStyle(.secondary)}.width(min:100,ideal:125)
                 }.contextMenu(forSelectionType:String.self){ids in
                     Button("打开目录"){model.open(ids,localSide:local)}.disabled(ids.count != 1)
                     Button(local ? "上传所选项目" : "下载所选项目"){model.transfer(upload:local)}.disabled(!model.session.connected || ids.isEmpty)
@@ -218,7 +241,8 @@ struct MainWindow:View {
         VStack(spacing:0){
             HStack{
                 Label("传输队列",systemImage:"arrow.up.arrow.down").font(.headline)
-                Text("\(model.jobs.filter{$0.status == "complete"}.count) / \(model.jobs.count) 已完成").font(.caption).foregroundStyle(.secondary);Spacer()
+                Text("\(model.jobs.filter{$0.status == "complete"}.count) / \(model.jobs.count) 已完成 · \(model.jobs.filter{$0.status == "failed"}.count) 失败").font(.caption).foregroundStyle(.secondary);Spacer()
+                Toggle("仅失败",isOn:$model.failuresOnly).toggleStyle(.checkbox)
                 Group{
                     Button{model.taskAction("pause")}label:{Label("暂停",systemImage:"pause")}
                     Button{model.taskAction("resume")}label:{Label("继续",systemImage:"play")}.disabled(!model.session.connected)
@@ -233,13 +257,13 @@ struct MainWindow:View {
             Divider()
             if model.jobs.isEmpty{ContentUnavailableView("传输队列为空",systemImage:"tray",description:Text("多选文件或文件夹，然后点击上传或下载"))}
             else{
-                Table(model.jobs,selection:$model.jobSelection){
+                Table(model.jobs.filter{!model.failuresOnly || $0.status == "failed"},selection:$model.jobSelection){
                     TableColumn("文件 / 目录"){task in HStack{
                         Image(systemName:task.directory ? "folder" : task.direction == "upload" ? "arrow.up.doc" : "arrow.down.doc")
                         VStack(alignment:.leading,spacing:2){Text(task.remotePath).lineLimit(1).truncationMode(.middle);Text(task.groupName).font(.caption2).foregroundStyle(.secondary)}
                     }}.width(min:220,ideal:350)
                     TableColumn("进度"){task in HStack{ProgressView(value:task.progress);Text(task.progress,format:.percent.precision(.fractionLength(0))).monospacedDigit().frame(width:38,alignment:.trailing)}}.width(min:140,ideal:200)
-                    TableColumn("大小"){Text(ByteCountFormatter.string(fromByteCount:$0.size,countStyle:.file)).monospacedDigit()}.width(85)
+                    TableColumn("大小"){Text($0.directory ? "—" : ByteCountFormatter.string(fromByteCount:$0.size,countStyle:.file)).monospacedDigit()}.width(85)
                     TableColumn("速度"){Text($0.speed > 0 ? ByteCountFormatter.string(fromByteCount:Int64($0.speed),countStyle:.binary)+"/s" : "—").monospacedDigit()}.width(100)
                     TableColumn("状态"){task in Text(task.statusText).foregroundStyle(task.status == "failed" ? Color.red : Color.primary)}.width(90)
                 }
@@ -262,22 +286,27 @@ struct ConnectionSheet:View{
     @State private var busy=false
     @State private var error=""
     @State private var scopes:[URL]=[]
+    @State private var identityReference=UserDefaults.standard.data(forKey:"identityReference")
+    @State private var rememberIdentity=true
     var body:some View{
         VStack(alignment:.leading,spacing:16){
             Label("连接安全文件服务器",systemImage:"lock.shield").font(.title2)
             Form{
                 TextField("服务器",text:$host).textFieldStyle(.roundedBorder)
                 TextField("端口",text:$port).textFieldStyle(.roundedBorder)
-                LabeledContent("CA证书"){Text(ca?.lastPathComponent ?? "未选择").foregroundStyle(.secondary);Button("选择…"){pick(false)}}
-                LabeledContent("客户端身份"){Text(identity?.lastPathComponent ?? "未选择P12").foregroundStyle(.secondary);Button("选择…"){pick(true)}}
-                SecureField("P12密码",text:$password).textFieldStyle(.roundedBorder)
+                HStack{Text("CA证书");Text(ca?.lastPathComponent ?? "未选择").foregroundStyle(.secondary);Spacer();Button("选择CA…"){pick(false)}}.accessibilityElement(children:.contain)
+                HStack{Text("客户端身份");Text(identityReference != nil ? "系统钥匙串" : identity?.lastPathComponent ?? "未选择P12").foregroundStyle(.secondary);Spacer();Button("选择P12…"){pick(true)}}.accessibilityElement(children:.contain)
+                if identityReference == nil {
+                    SecureField("P12密码",text:$password).textFieldStyle(.roundedBorder)
+                    Toggle("将身份保存到系统钥匙串",isOn:$rememberIdentity).disabled(!supportsMemoryIdentity)
+                }
             }
             Text("双向验证证书，账户由客户端身份决定。密码只用于读取P12，不写入配置或任务记录。").font(.caption).foregroundStyle(.secondary)
             if !error.isEmpty{Text(error).foregroundStyle(.red).font(.callout).textSelection(.enabled)}
             HStack{
                 if busy{ProgressView().controlSize(.small);Text("正在验证证书…").foregroundStyle(.secondary)};Spacer()
                 Button("取消",role:.cancel){for url in scopes{url.stopAccessingSecurityScopedResource()};dismiss()}.keyboardShortcut(.cancelAction).disabled(busy)
-                Button("连接"){connect()}.keyboardShortcut(.defaultAction).disabled(busy || ca == nil || identity == nil || password.isEmpty)
+                Button("连接"){connect()}.keyboardShortcut(.defaultAction).disabled(busy || ca == nil || (identityReference == nil && (identity == nil || password.isEmpty)))
             }
         }.padding(24).frame(width:490)
         .onAppear{restore("caBookmark",false);restore("identityBookmark",true)}
@@ -290,15 +319,21 @@ struct ConnectionSheet:View{
     private func pick(_ identityFile:Bool){
         let panel=NSOpenPanel();panel.title=identityFile ? "选择客户端P12身份" : "选择实验CA证书";panel.canChooseDirectories=false
         guard panel.runModal() == .OK,let url=panel.url else{return};_ = url.startAccessingSecurityScopedResource();scopes.append(url)
-        do{UserDefaults.standard.set(try url.bookmarkData(options:.withSecurityScope,includingResourceValuesForKeys:nil,relativeTo:nil),forKey:identityFile ? "identityBookmark" : "caBookmark");if identityFile{identity=url;password=""}else{ca=url}}
+        do{UserDefaults.standard.set(try url.bookmarkData(options:.withSecurityScope,includingResourceValuesForKeys:nil,relativeTo:nil),forKey:identityFile ? "identityBookmark" : "caBookmark");if identityFile{identity=url;password="";identityReference=nil;UserDefaults.standard.removeObject(forKey:"identityReference")}else{ca=url}}
         catch{self.error=error.localizedDescription}
     }
     private func connect(){
-        guard let ca,let identity,let portNumber=UInt16(port),portNumber>0,!host.isEmpty else{error="请输入有效的服务器和端口";return}
+        guard let ca,let portNumber=UInt16(port),portNumber>0,!host.isEmpty else{error="请输入有效的服务器和端口";return}
         busy=true;error=""
         Task{do{
-            try await model.connect(Credentials(host:host,port:portNumber,ca:ca,identity:identity,password:password),scopes:scopes)
+            if identityReference == nil,rememberIdentity,let identity {
+                let enteredPassword=password
+                let reference=try await model.disk.run{try IdentityVault.save(identity,password:enteredPassword)}
+                identityReference=reference;UserDefaults.standard.set(reference,forKey:"identityReference")
+            }
+            try await model.connect(Credentials(host:host,port:portNumber,ca:ca,identity:identity ?? URL(fileURLWithPath:"/"),password:password,identityReference:identityReference),scopes:scopes)
             UserDefaults.standard.set(host,forKey:"host");UserDefaults.standard.set(port,forKey:"port");password="";scopes=[];dismiss()
         }catch{self.error=error.localizedDescription;busy=false}}
     }
+    private var supportsMemoryIdentity:Bool { if #available(macOS 15.0,*) {return true};return false }
 }
