@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ex1b-safe-transfer"
+version = "1.0.0"
+description = "安全文件传输实验服务端"
+requires-python = ">=3.13"
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10", "pytest-asyncio>=1,<2"]
+
+[project.scripts]
+ex1b = "ex1b.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["server"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

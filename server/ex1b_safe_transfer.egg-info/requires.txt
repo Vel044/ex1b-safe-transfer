@@ -1,0 +1,4 @@
+
+[test]
+pytest<10,>=8
+pytest-asyncio<2,>=1

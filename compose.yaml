@@ -1,0 +1,25 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "127.0.0.1:8443:8443"
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 1
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 1024
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    volumes:
+      - ./runtime/container-data:/data
+      - ./runtime/server-certs:/certs:ro
+    restart: unless-stopped
+    stop_grace_period: 20s

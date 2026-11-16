@@ -1,0 +1,8 @@
+*
+!pyproject.toml
+!server/
+!server/**
+!deploy/
+!deploy/Dockerfile
+!deploy/server.json
+**/__pycache__
