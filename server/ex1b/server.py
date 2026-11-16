@@ -12,6 +12,7 @@ import time
 import uuid
 from collections import Counter, defaultdict
 from pathlib import Path
+from weakref import WeakValueDictionary
 
 from .database import Database
 from .protocol import CHUNK, Fault, Frame, Kind, integer, read_frame, string
@@ -45,7 +46,7 @@ class Server:
         self.ip_counts = Counter()
         self.user_counts = Counter()
         self.active = defaultdict(dict)
-        self.locks = {}
+        self.locks = WeakValueDictionary()
         self.buckets = defaultdict(Bucket)
         self.connections = set()
         self.tasks = set()
@@ -127,6 +128,9 @@ class Server:
                 del self.ip_counts[ip]
 
     async def close(self):
+        if getattr(self, "closed", False):
+            return
+        self.closed = True
         self.accept_task.cancel()
         self.socket.close()
         await asyncio.gather(self.accept_task, return_exceptions=True)
@@ -151,6 +155,7 @@ class Session:
         self.ids = set()
         self.control_times = []
         self.transfers = set()
+        self.owned_locks = {}
 
     async def send(self, frame):
         async with self.send_lock:
@@ -188,7 +193,7 @@ class Session:
             if self.jail:
                 for transfer in self.transfers:
                     self.server.active[self.user["name"]].pop(transfer, None)
-                    self.server.locks.pop(transfer, None)
+                self.owned_locks.clear()
                 if not self.server.active[self.user["name"]]:
                     self.server.active.pop(self.user["name"], None)
                 self.server.user_counts[self.user["name"]] -= 1
@@ -237,11 +242,13 @@ class Session:
             raise Fault("LIMIT", "账户同时传输上限为4")
         active[transfer] = self
         self.transfers.add(transfer)
-        self.server.locks.setdefault(transfer, asyncio.Lock())
+        lock = self.server.locks.setdefault(transfer, asyncio.Lock())
+        self.owned_locks[transfer] = lock
 
     def release(self, transfer):
         self.server.active[self.user["name"]].pop(transfer, None)
         self.transfers.discard(transfer)
+        self.owned_locks.pop(transfer, None)
         # Lock remains until connection teardown; waiters may still own it.
 
     def transfer_id(self, meta):
@@ -260,6 +267,13 @@ class Session:
         return await self.server.work(self.server.database.get, transfer, self.user["name"])
 
     async def ready(self, record):
+        if record["direction"] == "upload" and record["status"] not in ("complete","cancelled","failed") and not self.partial(record["id"]).exists():
+            if await self.server.work(self.jail.exists, record["path"]):
+                size,digest = await self.server.work(self.jail.identity, record["path"])
+                if (size,digest) == (record["size"],record["sha256"]):
+                    await self.server.work(self.server.database.update, record["id"], size, "complete")
+                    record["offset"] = size
+                    record["status"] = "complete"
         meta = {k:record[k] for k in ("id","direction","path","size","sha256","offset","status")}
         if record["status"] == "complete":
             return Kind.RESULT, meta

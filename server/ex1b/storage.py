@@ -107,7 +107,13 @@ class Jail:
         with self.directory(segments[:-1]) as parent:
             try:
                 # linkat creates the final name atomically and MUST fail if it exists.
-                os.link(temporary, segments[-1], dst_dir_fd=parent, follow_symlinks=False)
+                try:
+                    os.link(temporary, segments[-1], dst_dir_fd=parent, follow_symlinks=False)
+                except FileExistsError:
+                    source = os.stat(temporary, follow_symlinks=False)
+                    target = os.stat(segments[-1], dir_fd=parent, follow_symlinks=False)
+                    if (source.st_dev,source.st_ino) != (target.st_dev,target.st_ino):
+                        raise
                 os.fsync(parent)
             except OSError as exc:
                 raise file_fault(exc) from exc

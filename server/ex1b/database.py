@@ -79,6 +79,9 @@ class Database:
                     used = self.db.execute("SELECT COALESCE(SUM(size),0) FROM transfers WHERE user=? AND direction='upload' AND status NOT IN ('cancelled','failed')", (user,)).fetchone()[0]
                     if used + size > account["quota"]:
                         raise Fault("QUOTA", "存储配额不足，包含未完成任务预留空间")
+                count = self.db.execute("SELECT COUNT(*) FROM transfers WHERE user=?", (user,)).fetchone()[0]
+                if count >= 10000:
+                    raise Fault("LIMIT", "账户任务记录达到10000条，请管理员归档运行数据")
                 self.db.execute("INSERT INTO transfers(id,user,direction,path,size,sha256,updated) VALUES(?,?,?,?,?,?,?)", (transfer,user,direction,path,size,sha256,time.time()))
                 self.db.execute("COMMIT")
             except BaseException:
