@@ -32,6 +32,9 @@ class Database:
                 id INTEGER PRIMARY KEY, timestamp REAL, user TEXT, event TEXT, detail TEXT);
         """)
 
+        if "access" not in [r[1] for r in self.db.execute("PRAGMA table_info(users)")]:
+            self.db.execute("ALTER TABLE users ADD COLUMN access TEXT NOT NULL DEFAULT 'rw'")
+
     def user(self, fingerprint=None, name=None):
         with self.lock:
             row = self.db.execute("SELECT * FROM users WHERE fingerprint=?" if fingerprint else "SELECT * FROM users WHERE name=?", (fingerprint or name,)).fetchone()
@@ -42,19 +45,23 @@ class Database:
     def add_user(self, name, fingerprint, bandwidth, quota):
         if not name or len(name) > 64 or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for c in name):
             raise Fault("INPUT", "账户名只允许字母、数字、下划线和连字符")
-        if bandwidth < 65536 or quota < 0:
-            raise Fault("INPUT", "带宽不得低于64KiB/s，配额不能为负")
+        if (bandwidth != 0 and bandwidth < 65536) or quota < 0:
+            raise Fault("INPUT", "带宽0表示不限速，非零带宽不得低于64KiB/s，配额不能为负")
         (self.root / "users" / name).mkdir(parents=True, exist_ok=True, mode=0o700)
         with self.lock:
             self.db.execute("INSERT INTO users(name,fingerprint,bandwidth,quota) VALUES(?,?,?,?)", (name, fingerprint, bandwidth, quota))
 
-    def update_user(self, name, active=None, bandwidth=None):
+    def update_user(self, name, active=None, bandwidth=None, access=None):
         with self.lock:
+            if access is not None:
+                if access not in ("r","rw"):
+                    raise Fault("INPUT","权限必须为 r 或 rw")
+                self.db.execute("UPDATE users SET access=? WHERE name=?", (access,name))
             if active is not None:
                 self.db.execute("UPDATE users SET active=? WHERE name=?", (int(active), name))
             if bandwidth is not None:
-                if bandwidth < 65536:
-                    raise Fault("INPUT", "带宽不得低于64KiB/s")
+                if bandwidth != 0 and bandwidth < 65536:
+                    raise Fault("INPUT", "非零带宽不得低于64KiB/s")
                 self.db.execute("UPDATE users SET bandwidth=? WHERE name=?", (bandwidth, name))
 
     def get(self, transfer, user):

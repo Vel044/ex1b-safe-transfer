@@ -25,7 +25,7 @@ import UniformTypeIdentifiers
         Task{
             do{
                 let content=try await SCShareableContent.currentProcess
-                let number=NSApp.windows.first(where:{$0.isVisible && $0.title == "安传"})?.windowNumber
+                let number=NSApp.windows.first(where:{$0.isVisible && $0.title == "SFT1 Transfer"})?.windowNumber
                 guard let window=content.windows.first(where:{Int($0.windowID) == number && $0.owningApplication?.processID == getpid()}) else {
                     report?("未找到本应用可采集的窗口");return
                 }
@@ -37,7 +37,7 @@ import UniformTypeIdentifiers
         guard let destination else{return}
         do{
             let configuration=SCStreamConfiguration()
-            let window=NSApp.windows.first(where:{$0.isVisible && $0.title == "安传"})
+            let window=NSApp.windows.first(where:{$0.isVisible && $0.title == "SFT1 Transfer"})
             let size=window?.frame.size ?? CGSize(width:1220,height:800)
             let scale=window?.screen?.backingScaleFactor ?? 2
             configuration.width=max(2,Int(size.width*scale)/2*2)

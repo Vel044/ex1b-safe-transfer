@@ -1,0 +1,14 @@
+{
+  "source": "/Users/vel/Desktop/学习/软件与系统安全/实验1B/video/SFT1_实验1B_演示_含音频.mov",
+  "output": "/Users/vel/Desktop/学习/软件与系统安全/实验1B/video/SFT1_实验1B_演示_字幕版.mp4",
+  "captions": "/Users/vel/Desktop/学习/软件与系统安全/实验1B/video/SFT1_实验1B_演示_字幕.srt",
+  "caption_count": 76,
+  "audio": "AAC stream copied; packet SHA-256 verified identical",
+  "audio_hash": "SHA256=307e4a7c0567c41f14fe8364c0c96661e2c140a5f9fc02340ee72fe9f43f1e69",
+  "duration": 299.708333,
+  "frames": 7193,
+  "changes": [
+    "1｜项目文件架构 / 编译启动",
+    "2｜上传下载删除"
+  ]
+}

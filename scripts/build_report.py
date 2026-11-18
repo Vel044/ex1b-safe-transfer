@@ -78,7 +78,7 @@ class Report:
         self.c.setFillColor(MUTED)
         self.c.setFont("CN", 8.5)
         self.c.drawString(LEFT, H - 31, "软件与系统安全  实验1B")
-        self.c.drawRightString(RIGHT, H - 31, "安传  SFT1")
+        self.c.drawRightString(RIGHT, H - 31, "SFT1 Transfer")
         self.c.setStrokeColor(LINE)
         self.c.setLineWidth(.5)
         self.c.line(LEFT, H - 40, RIGHT, H - 40)
@@ -233,7 +233,7 @@ def build(args):
     r = Report(output, args.name, args.student_id, date)
 
     r.new_page("安全文件传输软件设计与实现", "")
-    r.text("安传 macOS原生客户端与双向TLS文件服务器", size=14, font="CNB", leading=22, gap=18)
+    r.text("SFT1 Transfer macOS原生客户端与双向TLS文件服务器", size=14, font="CNB", leading=22, gap=18)
     r.table(["姓名", "学号", "实验日期"], [[args.name, args.student_id, date]], [120, 220, WIDTH-340], size=11, padding=10)
     r.sub("实验目标与完成情况")
     r.text("本实验选择1B，实现安全文件传输软件。客户端整体使用Swift，界面由SwiftUI与AppKit系统组件构建；服务端使用Python异步网络接口，在Linux容器中运行。应用以双向TLS建立身份可信的长连接，在其上实现SFT1消息分帧、目录操作、数据确认和任务恢复。")
@@ -455,7 +455,7 @@ def build(args):
         ".venv/bin/python scripts/bootstrap.py",
         "sh scripts/container_up.sh",
         "sh scripts/build_macos.sh",
-        "open build/安传.app",
+        'open "build/SFT1 Transfer.app"',
     ]
     r.text("\n".join(commands), size=9.5, leading=16, gap=10)
     r.text("客户端选择localhost:8443、runtime/certs/ca.pem及alice.p12或bob.p12，密码在各自.password文件中。通过系统选择器授权本地目录，选择文件或文件夹上传下载。单文件1GiB、账户2GiB；同名文件拒绝覆盖，源文件改变时取消旧任务并重新添加。", size=10, leading=16)

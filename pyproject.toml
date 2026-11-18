@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ex1b-safe-transfer"
 version = "1.0.0"
-description = "安全文件传输实验服务端"
+description = "SFT1 Transfer: custom secure file transfer protocol and server"
 requires-python = ">=3.13"
 dependencies = []
 

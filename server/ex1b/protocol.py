@@ -17,6 +17,8 @@ class Kind(enum.IntEnum):
     WELCOME = 2
     LIST = 10
     LIST_RESULT = 11
+    DELETE = 14
+    COPY = 15
     MKDIR = 12
     OK = 13
     PUT_INIT = 20

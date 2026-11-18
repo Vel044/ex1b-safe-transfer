@@ -1,0 +1,26 @@
+{
+  "output": "/Users/vel/Desktop/学习/软件与系统安全/实验1B/tmp/protocol-ppt/layers-reconnect-draft.pptx",
+  "source_template": "/Users/vel/Desktop/LiteEth驱动移植.pptx",
+  "slide_count": 10,
+  "titles": [
+    "SFT1 协议分层与报头",
+    "按长度解析 SFT1 消息",
+    "会话初始化与断开连接",
+    "文件上传：分块写入与确认",
+    "文件下载：拉取、落盘与完成确认",
+    "重点模块：多文件并发",
+    "重点模块：断点续传",
+    "CA 签名：申请与签发证书",
+    "双向验证：证书、身份与账户",
+    "TLA+ 与 TLC 形式化验证"
+  ],
+  "diagrams": 13,
+  "fonts": [
+    "等线",
+    "Menlo"
+  ],
+  "slide_size_emu": [
+    12192000,
+    6858000
+  ]
+}

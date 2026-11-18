@@ -17,3 +17,9 @@ output/
 *.xcuserstate
 xcuserdata/
 !fixtures/*.json
+
+# Downloaded formal verification tool and TLC temporary state
+formal/tools/*.jar
+formal/states/
+formal/*_TTrace_*
+tmp/pdfs/protocol-verification/

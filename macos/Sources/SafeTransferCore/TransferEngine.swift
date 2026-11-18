@@ -13,9 +13,12 @@ public struct RemoteEntry: Identifiable, Sendable {
 }
 
 public struct SessionSnapshot: Sendable {
+    public var access = "r"
+    public var writable:Bool { access == "rw" }
     public var connected = false
     public var user = ""
     public var bandwidth: Int64 = 0
+    public var bandwidthText:String { bandwidth == 0 ? "不限速" : ByteCountFormatter.string(fromByteCount:bandwidth,countStyle:.binary)+"/s" }
     public var detail = "尚未连接"
     public var heartbeats = 0
     public var connectionID = ""
@@ -55,6 +58,7 @@ public actor TransferEngine {
         catch { transport.disconnect(); state.detail = error.localizedDescription; throw error }
         connection = transport
         state.connected = true
+        state.access = welcome.meta["access"]?.text ?? "rw"
         state.user = try welcome.meta.text("user")
         state.bandwidth = try welcome.meta.integer("bandwidth")
         state.detail = "双向证书已验证"
@@ -89,6 +93,7 @@ public actor TransferEngine {
         guard state.connected else { return }
         do {
             let response = try await call(.ping)
+            state.access = response.meta["access"]?.text ?? state.access
             state.heartbeats += 1
             if let rate = response.meta["bandwidth"]?.int { state.bandwidth = rate }
         } catch { await lost(error) }
@@ -154,6 +159,32 @@ public actor TransferEngine {
             } else { break }
         } while true
         return entries
+    }
+
+    public func deleteFile(_ path:String) async throws {
+        _ = try Disk.segments(path)
+        _ = try await call(.delete,meta:["path":.string(path)])
+    }
+    public func copyFile(_ source:String,to target:String) async throws {
+        _ = try Disk.segments(source); _ = try Disk.segments(target)
+        guard source != target, !target.hasPrefix(source+"/") else { throw TransferFault("INPUT","不能复制到自身或子目录") }
+        var pending=[(source,target)]
+        var count=0
+        while !pending.isEmpty {
+            let (from,to)=pending.removeFirst()
+            guard try Disk.segments(to).count <= 32 else { throw TransferFault("LIMIT","目录过深") }
+            count += 1
+            guard count <= 10000 else { throw TransferFault("LIMIT","复制条目超过限制") }
+            // A file COPY is distinguished from a directory by the source listing at its parent.
+            let pieces=from.split(separator:"/").map(String.init)
+            let entries=try await list(pieces.dropLast().joined(separator:"/"))
+            guard let entry=entries.first(where:{$0.name == pieces.last!}) else { throw TransferFault("NOT_FOUND","复制源不存在") }
+            if entry.directory {
+                try await mkdir(to)
+                let children=try await list(from)
+                pending.append(contentsOf:children.map{(Self.join(from,$0.name),Self.join(to,$0.name))})
+            } else { _ = try await call(.copy,meta:["source":.string(from),"path":.string(to)]) }
+        }
     }
 
     public func mkdir(_ path:String) async throws { _ = try await call(.mkdir,meta:["path":.string(path)]) }
@@ -222,6 +253,16 @@ public actor TransferEngine {
             }
         }
         await schedule()
+    }
+
+    public func removeFinished(ids:Set<String>) async throws -> Int {
+        let all = try await store.all()
+        let selected = all.filter { ids.contains($0.id) && ["complete", "cancelled"].contains($0.status) && running[$0.id] == nil }
+        let removable = selected.filter { task in
+            !task.directory || !all.contains { $0.group == task.group && $0.id != task.id && !["complete", "cancelled"].contains($0.status) }
+        }
+        try await store.remove(Set(removable.map(\.id)))
+        return removable.count
     }
 
     private func schedule() async {
@@ -326,7 +367,7 @@ public actor TransferEngine {
         let local=task.localPath, temporary=Self.temporary(task)
         let response:Packet
         if !task.started {
-            if try await disk.run({ try Disk.exists(root:root,path:local) }) { throw TransferFault("CONFLICT","已有同名文件，请改名后重试") }
+            if try await disk.run({ try Disk.exists(root:root,path:local) }) { throw TransferFault("CONFLICT","下载目标已存在：\(root.appendingPathComponent(local).path)。请刷新本地列表，或选择其他下载目录。") }
             response = try await call(.get,meta:["id":.string(task.id),"path":.string(task.remotePath)])
             task.size = try response.meta.integer("size"); task.sha256 = try response.meta.text("sha256"); task.started=true
             task.offset=0; try await store.save(task)
@@ -342,6 +383,7 @@ public actor TransferEngine {
                !(try await disk.run({ try Disk.exists(root:root,path:temporary) })) {
                 let (size,digest) = try await disk.run { try Disk.identity(root:root,path:local) }
                 guard size == task.size, digest == task.sha256 else { throw TransferFault("CONFLICT","目标已有其他文件，请改名后重试") }
+                try await disk.run{try Disk.makeVisible(root:root,path:local)}
                 _ = try await call(.finish,meta:["id":.string(task.id),"sha256":.string(task.sha256)])
                 task.offset=size; task.status="complete"; try await store.save(task); return
             }

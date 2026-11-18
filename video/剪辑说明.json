@@ -1,0 +1,62 @@
+{
+  "output": "/Users/vel/Desktop/学习/软件与系统安全/实验1B/video/SFT1_实验1B_演示初剪.mp4",
+  "audio": "removed",
+  "fps": 15,
+  "size": [
+    2560,
+    1800
+  ],
+  "duration_seconds": 337.0,
+  "clips": [
+    {
+      "file": "AB文件架构:编译启动.mp4",
+      "frames": 1680,
+      "offset": 0,
+      "total_frames": 5055
+    },
+    {
+      "file": "C1.mp4",
+      "frames": 375,
+      "offset": 1680,
+      "total_frames": 5055
+    },
+    {
+      "file": "C2.mp4",
+      "frames": 212,
+      "offset": 2055,
+      "total_frames": 5055
+    },
+    {
+      "file": "D.mp4",
+      "frames": 352,
+      "offset": 2267,
+      "total_frames": 5055
+    },
+    {
+      "file": "E1.mp4",
+      "frames": 1156,
+      "offset": 2619,
+      "total_frames": 5055
+    },
+    {
+      "file": "E2.mp4",
+      "frames": 305,
+      "offset": 3775,
+      "total_frames": 5055
+    },
+    {
+      "file": "F并发IO.mp4",
+      "frames": 524,
+      "offset": 4080,
+      "total_frames": 5055
+    },
+    {
+      "file": "G.mp4",
+      "frames": 451,
+      "offset": 4604,
+      "total_frames": 5055
+    }
+  ],
+  "bandwidth_caption_switch_seconds_in_G": 18,
+  "note": "G contains the Bob bandwidth adjustment; F is concurrency. E table lists expected outcomes, not asserted passes."
+}

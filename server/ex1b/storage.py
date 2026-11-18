@@ -50,6 +50,28 @@ class Jail:
         with self.directory(parts(path), create=True):
             pass
 
+    def delete(self, path):
+        segments = parts(path)
+        budget = [10000]
+        def remove(parent, name, depth):
+            budget[0] -= 1
+            if budget[0] < 0 or depth > 32:
+                raise Fault("LIMIT", "删除目录超过条目或深度限制")
+            info = os.stat(name, dir_fd=parent, follow_symlinks=False)
+            if stat.S_ISDIR(info.st_mode):
+                fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+                try:
+                    for child in os.listdir(fd):
+                        remove(fd, child, depth+1)
+                finally:
+                    os.close(fd)
+                os.rmdir(name, dir_fd=parent)
+            else:
+                os.unlink(name, dir_fd=parent)
+        with self.directory(segments[:-1]) as parent:
+            remove(parent, segments[-1], len(segments))
+            os.fsync(parent)
+
     def listing(self, path, cursor):
         with self.directory(parts(path, True)) as fd:
             entries = []

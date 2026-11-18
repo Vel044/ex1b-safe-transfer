@@ -1,0 +1,245 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 10 cores with 910MB heap and 64MB offheap memory [pid: 96782] (Mac OS X 27.2.1 aarch64, Homebrew 17.0.17 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /Users/vel/Desktop/学习/软件与系统安全/实验1B/formal/SFT1Upload.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/Naturals.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/TLC.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/Sequences.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/FiniteSets.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module SFT1Upload
+Starting... (2026-11-17 11:34:25)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-17 11:34:26.
+Error: Invariant NoCompletion is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+x = ( t1 :>
+      [ disk |-> 0,
+        cp |-> 0,
+        ack |-> 0,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "idle",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 2: <Receive line 13, col 5 to line 16, col 45 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 1,
+        cp |-> 0,
+        ack |-> 0,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "written",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 3: <Checkpoint line 18, col 5 to line 19, col 96 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 1,
+        cp |-> 1,
+        ack |-> 0,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "checkpointed",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 4: <SendAck line 21, col 5 to line 23, col 63 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 1,
+        cp |-> 1,
+        ack |-> 1,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "ack",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 5: <ConsumeAck line 25, col 5 to line 26, col 42 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 1,
+        cp |-> 1,
+        ack |-> 1,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "idle",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 6: <Receive line 13, col 5 to line 16, col 45 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 2,
+        cp |-> 1,
+        ack |-> 1,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "written",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 7: <Checkpoint line 18, col 5 to line 19, col 96 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 2,
+        cp |-> 2,
+        ack |-> 1,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "checkpointed",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 8: <SendAck line 21, col 5 to line 23, col 63 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 2,
+        cp |-> 2,
+        ack |-> 2,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "ack",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 9: <ConsumeAck line 25, col 5 to line 26, col 42 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 2,
+        cp |-> 2,
+        ack |-> 2,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "idle",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 10: <Receive line 13, col 5 to line 16, col 45 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 3,
+        cp |-> 2,
+        ack |-> 2,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "written",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 11: <Checkpoint line 18, col 5 to line 19, col 96 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 3,
+        cp |-> 3,
+        ack |-> 2,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "checkpointed",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 12: <SendAck line 21, col 5 to line 23, col 63 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 3,
+        cp |-> 3,
+        ack |-> 3,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "ack",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 13: <ConsumeAck line 25, col 5 to line 26, col 42 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 3,
+        cp |-> 3,
+        ack |-> 3,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "idle",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 14: <Verify line 33, col 5 to line 36, col 50 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 3,
+        cp |-> 3,
+        ack |-> 3,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "verified",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 15: <Publish line 38, col 5 to line 40, col 67 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 3,
+        cp |-> 3,
+        ack |-> 3,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> TRUE,
+        status |-> "active",
+        phase |-> "linked",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 16: <Complete line 42, col 5 to line 43, col 69 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 3,
+        cp |-> 3,
+        ack |-> 3,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> TRUE,
+        status |-> "complete",
+        phase |-> "reply",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+68 states generated, 41 distinct states found, 1 states left on queue.
+The depth of the complete state graph search is 16.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 2 and the 95th percentile is 2).
+Finished in 00s at (2026-11-17 11:34:26)

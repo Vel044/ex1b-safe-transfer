@@ -19,9 +19,9 @@ source=folder/(prefix+"_ex1B_src")
 source.mkdir(exist_ok=True)
 archive=subprocess.check_output(["git","archive","--format=tar","HEAD"],cwd=ROOT)
 with tarfile.open(fileobj=io.BytesIO(archive)) as t:t.extractall(source,filter="data")
-app=ROOT/"build/安传.app"
+app=ROOT/"build/SFT1 Transfer.app"
 if not app.exists():raise SystemExit("请先构建Release应用")
-shutil.copytree(app,source/"macOS应用/安传.app",dirs_exist_ok=True)
+shutil.copytree(app,source/"macOS应用/SFT1 Transfer.app",dirs_exist_ok=True)
 for ext,suffix in [("pdf","report"),("mp4","play")]:
     name=f"{prefix}_ex1B_{suffix}.{ext}"
     shutil.copyfile(ROOT/"output"/name,folder/name)

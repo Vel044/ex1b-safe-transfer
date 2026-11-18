@@ -137,6 +137,19 @@ public enum Disk {
         }
     }
 
+    /// File Provider may mark a dot-prefixed staging file hidden. A published file
+    /// must be visible; preserve all flags except UF_HIDDEN and never follow links.
+    private static func makeVisible(_ fd:Int32)throws {
+        var info=stat()
+        guard fstat(fd,&info) == 0,info.st_mode & S_IFMT == S_IFREG else{throw failure("检查文件显示属性")}
+        if info.st_flags & UInt32(UF_HIDDEN) != 0 {
+            guard fchflags(fd,info.st_flags & ~UInt32(UF_HIDDEN)) == 0,fsync(fd) == 0 else{throw failure("恢复文件可见性")}
+        }
+    }
+    public static func makeVisible(root:URL,path:String)throws {
+        try withFile(root:root,path:path){fd in try makeVisible(fd)}
+    }
+
     public static func commit(root:URL,temporary:String,destination:String)throws {
         let source = try segments(temporary), target = try segments(destination)
         try withDirectory(root:root,pieces:Array(source.dropLast())) { sourceFD in
@@ -150,6 +163,10 @@ public enum Disk {
                         throw TransferFault("CONFLICT","已有同名文件，请改名后重试")
                     }
                 }
+                let published=openat(targetFD,target.last!,O_RDONLY|O_NOFOLLOW)
+                guard published >= 0 else{throw failure("打开已提交文件")}
+                defer{Darwin.close(published)}
+                try makeVisible(published)
                 guard fsync(targetFD) == 0 else { throw failure("同步目录") }
                 guard unlinkat(sourceFD,source.last!,0) == 0 else { throw failure("清理临时文件") }
             }
@@ -174,6 +191,7 @@ public enum Disk {
                 guard fd >= 0 else{throw failure("检查已提交文件")}
                 defer{Darwin.close(fd)}
                 guard try hashFD(fd) == sha256 else{throw TransferFault("INTEGRITY","已提交文件哈希不符")}
+                try makeVisible(fd)
                 guard unlinkat(sourceFD,source.last!,0) == 0,fsync(sourceFD) == 0 else{throw failure("恢复提交")}
                 return true
             }

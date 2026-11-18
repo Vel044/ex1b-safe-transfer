@@ -1,0 +1,177 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 10 cores with 910MB heap and 64MB offheap memory [pid: 96685] (Mac OS X 27.2.1 aarch64, Homebrew 17.0.17 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /Users/vel/Desktop/学习/软件与系统安全/实验1B/formal/SFT1Download.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/Naturals.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/TLC.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/Sequences.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/FiniteSets.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module SFT1Download
+Starting... (2026-11-17 11:34:23)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-17 11:34:23.
+Error: Invariant NoCompletion is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ sourceOK = TRUE
+/\ checked = FALSE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "read"
+/\ saved = 0
+/\ prefixOK = TRUE
+/\ server = 0
+/\ disk = 0
+
+State 2: <ReadWrite line 9, col 14 to line 11, col 91 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = FALSE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "save"
+/\ saved = 0
+/\ prefixOK = TRUE
+/\ server = 0
+/\ disk = 1
+
+State 3: <Save line 12, col 9 to line 13, col 90 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = FALSE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "ack"
+/\ saved = 1
+/\ prefixOK = TRUE
+/\ server = 0
+/\ disk = 1
+
+State 4: <Ack line 14, col 8 to line 15, col 89 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = FALSE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "read"
+/\ saved = 1
+/\ prefixOK = TRUE
+/\ server = 1
+/\ disk = 1
+
+State 5: <ReadWrite line 9, col 14 to line 11, col 91 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = FALSE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "save"
+/\ saved = 1
+/\ prefixOK = TRUE
+/\ server = 1
+/\ disk = 2
+
+State 6: <Save line 12, col 9 to line 13, col 90 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = FALSE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "ack"
+/\ saved = 2
+/\ prefixOK = TRUE
+/\ server = 1
+/\ disk = 2
+
+State 7: <Ack line 14, col 8 to line 15, col 89 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = FALSE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "read"
+/\ saved = 2
+/\ prefixOK = TRUE
+/\ server = 2
+/\ disk = 2
+
+State 8: <ReadWrite line 9, col 14 to line 11, col 91 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = FALSE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "save"
+/\ saved = 2
+/\ prefixOK = TRUE
+/\ server = 2
+/\ disk = 3
+
+State 9: <Save line 12, col 9 to line 13, col 90 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = FALSE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "ack"
+/\ saved = 3
+/\ prefixOK = TRUE
+/\ server = 2
+/\ disk = 3
+
+State 10: <Ack line 14, col 8 to line 15, col 89 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = FALSE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "read"
+/\ saved = 3
+/\ prefixOK = TRUE
+/\ server = 3
+/\ disk = 3
+
+State 11: <Verify line 16, col 11 to line 18, col 88 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = TRUE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "finish"
+/\ saved = 3
+/\ prefixOK = TRUE
+/\ server = 3
+/\ disk = 3
+
+State 12: <Finish line 19, col 11 to line 21, col 97 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = TRUE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = FALSE
+/\ phase = "commit"
+/\ saved = 3
+/\ prefixOK = TRUE
+/\ server = 3
+/\ disk = 3
+
+State 13: <Commit line 22, col 11 to line 24, col 86 of module SFT1Download>
+/\ sourceOK = TRUE
+/\ checked = TRUE
+/\ online = TRUE
+/\ crashes = 0
+/\ published = TRUE
+/\ phase = "done"
+/\ saved = 3
+/\ prefixOK = TRUE
+/\ server = 3
+/\ disk = 3
+
+44 states generated, 35 distinct states found, 2 states left on queue.
+The depth of the complete state graph search is 13.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 2 and the 95th percentile is 2).
+Finished in 00s at (2026-11-17 11:34:23)

@@ -64,6 +64,10 @@ public actor TaskStore {
         for value in values { context.insert(PersistedTransfer(id:value.id,payload:try JSONEncoder().encode(value))) }
         try context.save()
     }
+    public func remove(_ ids:Set<String>) throws {
+        for item in try context.fetch(FetchDescriptor<PersistedTransfer>()) where ids.contains(item.id) { context.delete(item) }
+        try context.save()
+    }
     public func recover() throws {
         for var value in try all() where ["queued","preparing","transferring","waiting"].contains(value.status) {
             value.status = "paused"; value.detail = "上次运行未完成，可继续传输"; value.speed = 0

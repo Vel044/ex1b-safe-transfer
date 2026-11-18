@@ -78,6 +78,7 @@ def main():
     add = operations.add_parser("user-add")
     add.add_argument("name")
     add.add_argument("--certificate",required=True)
+    add.add_argument("--access",choices=["r","rw"],default="rw")
     add.add_argument("--bandwidth",type=int,default=2097152)
     add.add_argument("--quota",type=int,default=2147483648)
     disable = operations.add_parser("user-disable")
@@ -86,7 +87,10 @@ def main():
     enable.add_argument("name")
     bandwidth = operations.add_parser("set-bandwidth")
     bandwidth.add_argument("name")
-    bandwidth.add_argument("bytes_per_second",type=int)
+    bandwidth.add_argument("bytes_per_second",type=int,help="0表示不限速；非零值至少65536字节/秒")
+    access = operations.add_parser("set-access")
+    access.add_argument("name")
+    access.add_argument("access",choices=["r","rw"])
     commands.add_parser("verify")
     args = parser.parse_args()
     try:
@@ -100,6 +104,9 @@ def main():
             try:
                 if args.operation == "user-add":
                     database.add_user(args.name,fingerprint(args.certificate),args.bandwidth,args.quota)
+                    database.update_user(args.name,access=args.access)
+                elif args.operation == "set-access":
+                    database.update_user(args.name,access=args.access)
                 elif args.operation == "set-bandwidth":
                     database.update_user(args.name,bandwidth=args.bytes_per_second)
                 else:

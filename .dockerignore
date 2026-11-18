@@ -7,3 +7,7 @@
 !deploy/server.json
 !deploy/init.py
 **/__pycache__
+
+!deploy/Dockerfile.ssh
+!deploy/sshd_config
+!deploy/ssh-entrypoint.sh

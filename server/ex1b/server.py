@@ -28,6 +28,8 @@ class Bucket:
         self.updated = time.monotonic()
 
     async def acquire(self, count, rate):
+        if rate == 0:
+            return  # Zero explicitly disables application-level bandwidth throttling.
         async with self.lock:
             while True:
                 now = time.monotonic()
@@ -174,7 +176,7 @@ class Session:
                 raise Fault("LIMIT", "同一账户最多两个连接")
             self.server.user_counts[self.user["name"]] += 1
             self.jail = await self.server.work(Jail, self.server.data / "users" / self.user["name"])
-            await self.send(Frame(Kind.WELCOME, hello.request, {"user":self.user["name"],"bandwidth":self.user["bandwidth"],"quota":self.user["quota"],"chunk":CHUNK,"max_active":4,"version":1}))
+            await self.send(Frame(Kind.WELCOME, hello.request, {"user":self.user["name"],"bandwidth":self.user["bandwidth"],"quota":self.user["quota"],"chunk":CHUNK,"max_active":4,"version":1,"access":self.user["access"]}))
             while True:
                 frame = await read_frame(self.reader)
                 if not frame.request or frame.request in self.ids or len(self.pending) >= 16:
@@ -286,12 +288,70 @@ class Session:
 
     async def dispatch(self, frame):
         kind, meta, rid = frame.kind, frame.meta, frame.request
+        if self.user["access"] != "rw":
+            if kind in (Kind.MKDIR,Kind.DELETE,Kind.COPY,Kind.PUT_INIT,Kind.DATA):
+                raise Fault("PERMISSION","此证书绑定账户只有读取权限")
+            if kind in (Kind.RESUME,Kind.FINISH):
+                record = self.server.database.get(self.transfer_id(meta),self.user["name"])
+                if record["direction"] == "upload":
+                    raise Fault("PERMISSION","此证书绑定账户只有读取权限")
         if kind == Kind.PING:
-            return Frame(Kind.PONG,rid,{"bandwidth":self.user["bandwidth"]})
+            return Frame(Kind.PONG,rid,{"bandwidth":self.user["bandwidth"],"access":self.user["access"]})
         if kind == Kind.LIST:
             path = meta.get("path","")
             parts(path,True)
             return Frame(Kind.LIST_RESULT,rid,await self.server.work(self.jail.listing,path,integer(meta,"cursor",0,10000)))
+        if kind == Kind.DELETE:
+            path = string(meta,"path")
+            parts(path)
+            def delete():
+                database = self.server.database
+                with database.lock:
+                    records = database.db.execute("SELECT * FROM transfers WHERE user=?", (self.user["name"],)).fetchall()
+                    affected = [r for r in records if r["path"] == path or r["path"].startswith(path+"/")]
+                    if any(r["status"] in ("active","paused") for r in affected):
+                        raise Fault("STATE", "请先完成或取消该路径的传输任务")
+                    self.jail.delete(path)
+                    for r in affected:
+                        if r["direction"] == "upload" and r["status"] == "complete":
+                            database.update(r["id"], status="failed")
+            await self.server.work(delete)
+            return Frame(Kind.OK,rid)
+        if kind == Kind.COPY:
+            source, target = string(meta,"source"), string(meta,"path")
+            parts(source); parts(target)
+            transfer = str(uuid.uuid4())
+            temporary = self.partial(transfer)
+            record = None
+            try:
+                size, digest = await self.server.work(self.jail.identity, source)
+                record = await self.server.work(self.server.database.create,transfer,self.user["name"],"upload",target,size,digest)
+                def copy():
+                    with self.jail.file(source) as fd:
+                        with open(temporary,"xb") as out:
+                            offset = 0
+                            while offset < size:
+                                block = os.pread(fd,min(CHUNK,size-offset),offset)
+                                if not block:
+                                    raise Fault("CHANGED","源文件发生变化")
+                                out.write(block); offset += len(block)
+                            out.flush(); os.fsync(out.fileno())
+                    if self.jail.identity(source) != (size,digest):
+                        raise Fault("CHANGED","源文件发生变化")
+                    from .storage import digest_fd
+                    with open(temporary,"rb") as check:
+                        if digest_fd(check.fileno()) != digest:
+                            raise Fault("INTEGRITY","复制校验失败")
+                    self.jail.commit(temporary,target)
+                await self.server.work(copy)
+                await self.server.work(self.server.database.update,transfer,size,"complete")
+            except BaseException:
+                if record:
+                    await self.server.work(self.server.database.update,transfer,None,"failed")
+                raise
+            finally:
+                temporary.unlink(missing_ok=True)
+            return Frame(Kind.OK,rid)
         if kind == Kind.MKDIR:
             await self.server.work(self.jail.mkdir,string(meta,"path"))
             return Frame(Kind.OK,rid)

@@ -53,7 +53,7 @@ def frame(title,lines,footer,duration):
     frames.append((path,duration))
 
 
-frame("安传 原生Mac客户端与安全服务器",[
+frame("SFT1 Transfer 原生Mac客户端与安全服务器",[
     f"姓名：{args.name}   学号：{args.student_id}",
     "客户端：SwiftUI / AppKit / Network.framework / Security / SwiftData",
     "服务端：Python asyncio / SQLite / Docker Linux",

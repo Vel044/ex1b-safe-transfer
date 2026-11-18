@@ -1,4 +1,5 @@
 import XCTest
+import Darwin
 @testable import SafeTransferCore
 
 final class ProtocolTests:XCTestCase {
@@ -56,6 +57,24 @@ final class ProtocolTests:XCTestCase {
         try FileManager.default.createSymbolicLink(atPath:root.appendingPathComponent("link").path,withDestinationPath:"/etc/passwd")
         XCTAssertThrowsError(try Disk.identity(root:root,path:"link"))
     }
+    func testPublishedDownloadClearsHiddenFlag() throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+        defer{try? FileManager.default.removeItem(at:root)}
+        let temporary=".sft-test.part"
+        _ = try Disk.prepare(root:root,temporary:temporary,offset:0)
+        try Disk.write(root:root,path:temporary,offset:0,data:Data("visible download".utf8))
+        let before=try Disk.identity(root:root,path:temporary)
+        XCTAssertEqual(chflags(root.appendingPathComponent(temporary).path,UInt32(UF_HIDDEN)),0)
+        try Disk.commit(root:root,temporary:temporary,destination:"中文文件.bin")
+        let after=try Disk.identity(root:root,path:"中文文件.bin")
+        XCTAssertEqual(before.0,after.0);XCTAssertEqual(before.1,after.1)
+        var info=stat()
+        XCTAssertEqual(lstat(root.appendingPathComponent("中文文件.bin").path,&info),0)
+        XCTAssertEqual(info.st_flags & UInt32(UF_HIDDEN),0)
+        XCTAssertFalse(try Disk.exists(root:root,path:temporary))
+    }
+
     func testPersistentTaskRecovery() async throws {
         let store=try TaskStore(inMemory:true)
         var task=TransferSnapshot(); task.status="transferring"; task.offset=65536

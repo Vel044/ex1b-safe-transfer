@@ -6,7 +6,7 @@ import SafeTransferCore
 struct SafeTransferApplication: App {
     @StateObject private var model = AppModel()
     var body: some Scene {
-        WindowGroup("安传") { MainWindow(model:model).frame(minWidth:1000,minHeight:680) }
+        WindowGroup("SFT1 Transfer") { MainWindow(model:model).frame(minWidth:1000,minHeight:680) }
             .defaultSize(width:1220,height:800).windowToolbarStyle(.unified)
             .commands {
                 CommandGroup(after:.newItem) {
@@ -26,7 +26,7 @@ struct SafeTransferApplication: App {
             }
         Settings {
             Form {
-                Text("安传 安全文件传输").font(.headline)
+                Text("SFT1 Transfer").font(.headline)
                 LabeledContent("客户端",value:"SwiftUI · AppKit · Network.framework")
                 LabeledContent("协议",value:"SFT1 / 双向TLS / SHA-256")
                 Text("每个账户最多4个并发文件；同名文件拒绝覆盖。证书密码不写入配置或任务记录。").foregroundStyle(.secondary)
@@ -36,9 +36,9 @@ struct SafeTransferApplication: App {
     }
     #if DEBUG
     private func exportWindow() {
-        guard let view=NSApp.windows.first(where:{$0.isVisible && $0.title == "安传"})?.contentView,
+        guard let view=NSApp.windows.first(where:{$0.isVisible && $0.title == "SFT1 Transfer"})?.contentView,
               let bitmap=view.bitmapImageRepForCachingDisplay(in:view.bounds) else{return}
-        let panel=NSSavePanel();panel.nameFieldStringValue="安传界面.png"
+        let panel=NSSavePanel();panel.nameFieldStringValue="SFT1 Transfer.png"
         guard panel.runModal() == .OK,let destination=panel.url else{return}
         view.cacheDisplay(in:view.bounds,to:bitmap)
         do{try bitmap.representation(using:.png,properties:[:])?.write(to:destination)}catch{model.errorText=error.localizedDescription}
@@ -46,7 +46,7 @@ struct SafeTransferApplication: App {
     #endif
 }
 
-struct FileRow:Identifiable,Sendable {
+struct FileRow:Identifiable,Sendable,Equatable {
     let name:String; let directory:Bool; let size:Int64; let modified:Date
     var id:String{name}
     var sizeText:String{directory ? "—" : ByteCountFormatter.string(fromByteCount:size,countStyle:.file)}
@@ -73,7 +73,8 @@ struct FileRow:Identifiable,Sendable {
     let engine:TransferEngine
     let disk=DiskWorker()
     private var scopes:[URL]=[]
-    private var completeCount=0
+    private var taskStatuses:[String:String]=[:]
+    private var lastLocalRefresh=Date.distantPast
 
     init() {
         do{engine=TransferEngine(store:try TaskStore())}
@@ -90,15 +91,20 @@ struct FileRow:Identifiable,Sendable {
                 session=await engine.session()
                 if let tasks=try? await engine.tasks(){
                     jobs=tasks
-                    let count=tasks.filter{$0.status == "complete"}.count
-                    if count != completeCount{completeCount=count;await refreshLocal();if session.connected{await refreshRemote()}}
+                    let statuses=Dictionary(uniqueKeysWithValues:tasks.map{($0.id,$0.status)})
+                    if statuses != taskStatuses {
+                        taskStatuses=statuses
+                        await refreshLocal()
+                        if session.connected{await refreshRemote()}
+                    }
                 }
+                if Date().timeIntervalSince(lastLocalRefresh) >= 2 {await refreshLocal()}
                 try? await Task.sleep(for:.milliseconds(500))
             }
         }
     }
     func chooseRoot(){
-        let panel=NSOpenPanel();panel.title="选择允许安传访问的本地目录";panel.canChooseDirectories=true;panel.canChooseFiles=false
+        let panel=NSOpenPanel();panel.title="选择允许 SFT1 Transfer 访问的本地目录";panel.canChooseDirectories=true;panel.canChooseFiles=false
         guard panel.runModal() == .OK,let url=panel.url else{return}
         do{
             let data=try url.bookmarkData(options:.withSecurityScope,includingResourceValuesForKeys:nil,relativeTo:nil)
@@ -110,6 +116,7 @@ struct FileRow:Identifiable,Sendable {
     func refresh(){Task{await refreshLocal();if session.connected{await refreshRemote()}}}
     func refreshLocal()async{
         guard let root else{return};let path=localPath
+        lastLocalRefresh=Date()
         do{
             let rows=try await disk.run{()->[FileRow] in
                 let pieces=try Disk.segments(path,rootAllowed:true)
@@ -122,7 +129,7 @@ struct FileRow:Identifiable,Sendable {
                     }.sorted{$0.directory != $1.directory ? $0.directory : $0.name.localizedStandardCompare($1.name) == .orderedAscending}
                 }
             }
-            if localPath == path{local=rows}
+            if localPath == path,self.root == root{local=rows}
         }catch{errorText=error.localizedDescription}
     }
     func refreshRemote()async{
@@ -174,11 +181,19 @@ struct FileRow:Identifiable,Sendable {
             else{try await engine.mkdir(TransferEngine.join(remotePath,name));await refreshRemote()}
         }catch{errorText=error.localizedDescription}}
     }
-    func taskAction(_ action:String,group:Bool=false){
-        var ids=jobSelection
-        if group{let groups=Set(jobs.filter{ids.contains($0.id)}.map(\.group));ids=Set(jobs.filter{groups.contains($0.group)}.map(\.id))}
+    func taskAction(_ action:String){
+        let ids=jobSelection
         Task{do{try await engine.action(action,ids:ids)}catch{errorText=error.localizedDescription}}
     }
+    func removeTasks(all:Bool){
+        let ids=all ? Set(jobs.map(\.id)) : jobSelection
+        Task{do{
+            let count=try await engine.removeFinished(ids:ids)
+            jobs=try await engine.tasks();jobSelection.subtract(ids)
+            notice="已清理 \(count) 条已完成或已取消任务；其他任务请先取消"
+        }catch{errorText=error.localizedDescription}}
+    }
+
 }
 
 struct MainWindow:View {
@@ -192,7 +207,7 @@ struct MainWindow:View {
             Divider()
             HStack(spacing:12){
                 Image(systemName:model.session.connected ? "lock.shield.fill" : "network.slash").foregroundStyle(model.session.connected ? Color.green : Color.secondary)
-                Text(model.session.connected ? "\(model.session.user) · 双向TLS · \(ByteCountFormatter.string(fromByteCount:model.session.bandwidth,countStyle:.binary))/s" : model.session.detail).lineLimit(1)
+                Text(model.session.connected ? "\(model.session.user) · \(model.session.access) · 双向TLS · \(model.session.bandwidthText)" : model.session.detail).lineLimit(1)
                 Spacer();if model.working{ProgressView().controlSize(.small)}
                 Text(model.notice).foregroundStyle(.secondary).lineLimit(1)
             }.font(.caption).padding(.horizontal,14).padding(.vertical,8)
@@ -203,7 +218,7 @@ struct MainWindow:View {
                 if model.session.connected{Button{model.disconnect()}label:{Label("断开",systemImage:"eject")}}
             }
             ToolbarItemGroup{
-                Button{model.transfer(upload:true)}label:{Label("上传",systemImage:"arrow.up.doc")}.disabled(!model.session.connected || model.localSelection.isEmpty || model.working)
+                Button{model.transfer(upload:true)}label:{Label("上传",systemImage:"arrow.up.doc")}.disabled(!model.session.connected || !model.session.writable || model.localSelection.isEmpty || model.working)
                 Button{model.transfer(upload:false)}label:{Label("下载",systemImage:"arrow.down.doc")}.disabled(!model.session.connected || model.remoteSelection.isEmpty || model.root == nil || model.working)
                 Button{model.refresh()}label:{Label("刷新",systemImage:"arrow.clockwise")}
             }
@@ -215,9 +230,12 @@ struct MainWindow:View {
         VStack(spacing:0){
             HStack{
                 Label(local ? "本地文件" : "服务器文件",systemImage:local ? "internaldrive" : "server.rack").font(.headline);Spacer()
-                if local{Button("选择目录…"){model.chooseRoot()}}
+                if local{
+                    Button("选择目录…"){model.chooseRoot()}
+                    Button("Finder"){model.revealInFinder(currentDirectory:true)}.disabled(model.root == nil).help("在 Finder 中打开当前本地目录")
+                }
                 Button{model.up(local)}label:{Image(systemName:"arrow.up")}.disabled(local ? model.localPath.isEmpty : model.remotePath.isEmpty).help("上一级目录")
-                Button{model.mkdir(local)}label:{Image(systemName:"folder.badge.plus")}.disabled(local ? model.root == nil : !model.session.connected).help("新建目录")
+                Button{model.mkdir(local)}label:{Image(systemName:"folder.badge.plus")}.disabled(local ? model.root == nil : (!model.session.connected || !model.session.writable)).help("新建目录")
             }.padding(10)
             HStack{Image(systemName:"folder");Text(local ? (model.root?.lastPathComponent ?? "未选择目录")+(model.localPath.isEmpty ? "" : "/"+model.localPath) : "/"+model.remotePath).lineLimit(1).truncationMode(.middle).textSelection(.enabled);Spacer()}.font(.caption).foregroundStyle(.secondary).padding(.horizontal,12).padding(.bottom,8)
             Divider()
@@ -226,14 +244,7 @@ struct MainWindow:View {
             }else if !local && !model.session.connected{
                 ContentUnavailableView{Label("尚未连接",systemImage:"server.rack")}description:{Text("使用证书连接安全文件服务器")}actions:{Button("连接服务器…"){model.showConnection=true}}
             }else{
-                Table((local ? model.local : model.remote).sorted(using:local ? model.localSort : model.remoteSort),selection:local ? $model.localSelection : $model.remoteSelection,sortOrder:local ? $model.localSort : $model.remoteSort){
-                    TableColumn("名称",value:\.name){row in Label(row.name,systemImage:row.directory ? "folder.fill" : "doc").foregroundStyle(row.directory ? Color.accentColor : Color.primary)}.width(min:140,ideal:240)
-                    TableColumn("大小",value:\.size){Text($0.sizeText).monospacedDigit()}.width(min:65,ideal:80)
-                    TableColumn("修改时间",value:\.modified){Text($0.modified,format:.dateTime.month().day().hour().minute()).foregroundStyle(.secondary)}.width(min:100,ideal:125)
-                }.contextMenu(forSelectionType:String.self){ids in
-                    Button("打开目录"){model.open(ids,localSide:local)}.disabled(ids.count != 1)
-                    Button(local ? "上传所选项目" : "下载所选项目"){model.transfer(upload:local)}.disabled(!model.session.connected || ids.isEmpty)
-                }primaryAction:{ids in model.open(ids,localSide:local)}
+                NativeFileTable(model:model,local:local)
             }
         }
     }
@@ -247,12 +258,10 @@ struct MainWindow:View {
                     Button{model.taskAction("pause")}label:{Label("暂停",systemImage:"pause")}
                     Button{model.taskAction("resume")}label:{Label("继续",systemImage:"play")}.disabled(!model.session.connected)
                     Button{model.taskAction("cancel")}label:{Label("取消",systemImage:"xmark")}
-                    Menu("整组任务"){
-                        Button("暂停所选文件夹"){model.taskAction("pause",group:true)}
-                        Button("继续所选文件夹"){model.taskAction("resume",group:true)}
-                        Button("取消所选文件夹"){model.taskAction("cancel",group:true)}
-                    }
+                    Button{model.removeTasks(all:false)}label:{Label("删除所选",systemImage:"trash")}
+
                 }.disabled(model.jobSelection.isEmpty)
+                Button("清理已结束"){model.removeTasks(all:true)}
             }.controlSize(.small).padding(10)
             Divider()
             if model.jobs.isEmpty{ContentUnavailableView("传输队列为空",systemImage:"tray",description:Text("多选文件或文件夹，然后点击上传或下载"))}

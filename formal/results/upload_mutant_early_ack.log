@@ -1,0 +1,63 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 10 cores with 910MB heap and 64MB offheap memory [pid: 96872] (Mac OS X 27.2.1 aarch64, Homebrew 17.0.17 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /Users/vel/Desktop/学习/软件与系统安全/实验1B/formal/SFT1Upload.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/Naturals.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/TLC.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/Sequences.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/FiniteSets.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module SFT1Upload
+Starting... (2026-11-17 11:34:30)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-17 11:34:30.
+Error: Invariant AckDurable is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+x = ( t1 :>
+      [ disk |-> 0,
+        cp |-> 0,
+        ack |-> 0,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "idle",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 2: <Receive line 13, col 5 to line 16, col 45 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 1,
+        cp |-> 0,
+        ack |-> 0,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "written",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+State 3: <SendAck line 21, col 5 to line 23, col 63 of module SFT1Upload>
+x = ( t1 :>
+      [ disk |-> 1,
+        cp |-> 0,
+        ack |-> 1,
+        good |-> TRUE,
+        cpGood |-> TRUE,
+        published |-> FALSE,
+        status |-> "active",
+        phase |-> "ack",
+        online |-> TRUE,
+        crashes |-> 0,
+        breach |-> FALSE ] )
+
+10 states generated, 8 distinct states found, 5 states left on queue.
+The depth of the complete state graph search is 3.
+The average outdegree of the complete state graph is 5 (minimum is 5, the maximum 5 and the 95th percentile is 5).
+Finished in 00s at (2026-11-17 11:34:30)

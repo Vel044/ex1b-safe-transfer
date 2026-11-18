@@ -42,6 +42,18 @@ struct Probe {
             if let seconds=Double(option("--idle-seconds","0")),seconds > 0 { try await Task.sleep(for:.seconds(seconds)) }
             let session=await engine.session()
             let tasks=try await engine.tasks()
+            if args.contains("--file-actions") {
+                let copied=String(folder)+"-copy"
+                try await engine.copyFile(String(folder),to:copied)
+                let copiedEntries=try await engine.list(copied)
+                guard copiedEntries.contains(where:{$0.name == "中文文件.bin"}) else{throw TransferFault("TEST","远端目录复制失败")}
+                try await engine.deleteFile(copied)
+                let remaining=try await engine.list("")
+                guard !remaining.contains(where:{$0.name == copied}) else{throw TransferFault("TEST","远端删除失败")}
+                let removed=try await engine.removeFinished(ids:Set(tasks.map(\.id)))
+                guard removed == tasks.count else{throw TransferFault("TEST","已结束队列清理失败")}
+                try await engine.deleteFile(String(folder))
+            }
             await engine.disconnect()
             let evidence:[String:Any] = ["result":"passed","client":"Swift Network.framework","user":session.user,"files_and_directories":tasks.count,"bytes":size,"sha256":digest,"symlink_warnings":warnings,"workspace":workspace.path,"heartbeats":session.heartbeats,"connection_id":session.connectionID]
             print(String(data:try JSONSerialization.data(withJSONObject:evidence,options:[.prettyPrinted,.sortedKeys]),encoding:.utf8)!)

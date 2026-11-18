@@ -1,0 +1,12 @@
+SFT1 Transfer
+
+Logo concept: opposing transfer arrows form an S inside a shield.
+The arrows represent bidirectional file transfer; the shield represents
+authenticated, encrypted transport. The blue tile is designed for macOS.
+
+Source: sft1-transfer.png, generated using the built-in image generation tool.
+The build script derives the standard macOS icon sizes and AppIcon.icns
+from this source. Keep the source PNG's transparent background.
+
+Generation prompt:
+Use case: logo-brand. Create a single polished macOS application icon for SFT1 Transfer, a desktop application implementing a custom secure file transfer protocol. A simple distinctive geometric S monogram made of two broad opposing transfer arrows, enclosed by a subtle shield silhouette suggesting authenticated secure transport. Premium restrained native macOS style, crisp large shapes, balanced negative space, rich deep blue rounded-square tile with luminous cyan and near-white arrow mark, very subtle dimensional depth, no busy details. Center the tile with modest transparent margins on a square 1024x1024 canvas, fully transparent outside the tile. Icon only, NO words, NO letters typeset, NO numbers, no mockup, no surrounding objects, no watermark, no separate variations. Ensure recognizable silhouette at 32 pixels. This will be the actual app icon and README logo.

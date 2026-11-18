@@ -1,0 +1,18 @@
+FROM python:3.13-slim
+WORKDIR /app
+COPY pyproject.toml /app/
+COPY server /app/server
+RUN pip install --no-cache-dir . && useradd --uid 10001 --create-home --shell /usr/sbin/nologin transfer
+COPY deploy/server.json /app/server.json
+COPY deploy/init.py /app/init.py
+RUN apt-get update && apt-get install -y --no-install-recommends openssh-server bash procps ca-certificates curl tar gzip libstdc++6 \
+    && rm -rf /var/lib/apt/lists/* \
+    && usermod --shell /bin/bash --password '*' transfer \
+    && chown -R transfer:transfer /app \
+    && pip install --no-cache-dir 'pytest>=8,<10' 'pytest-asyncio>=1,<2'
+COPY deploy/sshd_config /etc/ssh/sshd_config
+COPY deploy/ssh-entrypoint.sh /usr/local/bin/ssh-entrypoint
+ENV PYTHONPATH=/app/server
+WORKDIR /app
+EXPOSE 22 8443
+ENTRYPOINT ["sh", "/usr/local/bin/ssh-entrypoint"]

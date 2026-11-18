@@ -1,5 +1,7 @@
 # SFT1 应用层协议
 
+SFT1 是本项目设计并实现的应用层协议，由 Python 服务端和 Swift 客户端共同遵循；它不是 SFTP、SCP 或 FTP，也不兼容这些协议的现成客户端。TCP 和 TLS 使用系统及标准库提供的实现。
+
 SFT1运行于双向TLS的TCP字节流之上。TLS负责加密及对端身份验证，SFT1负责划分消息、关联请求、安排文件数据和持久化传输状态。文件结束不依靠关闭连接判断。
 
 ## 报头与字段
@@ -23,6 +25,7 @@ SFT1运行于双向TLS的TCP字节流之上。TLS负责加密及对端身份验�
 | 1 / 2 | HELLO / WELCOME | version；user、bandwidth、quota、chunk、max_active |
 | 10 / 11 | LIST / LIST_RESULT | path、cursor；entries、next |
 | 12 / 13 | MKDIR / OK | path；状态确认 |
+| 14 / 15 | DELETE / COPY | path；source、path，成功返回 OK |
 | 20 / 21 / 22 | PUT_INIT / GET_INIT / READY | id、path；size、sha256、offset、direction、status、上传prefix |
 | 23 / 24 / 27 | DATA / ACK / READ | id、offset；DATA带二进制块，ACK给出下一偏移 |
 | 25 / 26 | FINISH / RESULT | id；status、size、sha256 |
@@ -173,3 +176,27 @@ TCP keepalive与应用心跳同时开启。服务器45秒没有完整消息则�
 客户端：排队 → 校验 → 传输 → 完成，可转入暂停、等待连接、失败或取消。重启时未完成任务转为暂停，由用户手动继续。服务端保存active、paused、complete、cancelled、failed状态。源文件变化后需要取消旧任务并重新添加。
 
 文件夹是客户端持久化的目录及文件任务集合，不引入另一种数据通道。目录任务先执行，文件任务最多4个并发；失败文件不会阻止其他文件。已完成内容保留，重启后只恢复未完成部分。
+
+## 形式化验证
+
+选定的上传及下载状态机已建立 TLA+ 模型，配置、复现步骤和原始 TLC 输出见 [formal](../formal/README.md)。单独的[协议验证报告](protocol-verification-report.md)说明安全性、带假设的活性、故意修改规则后的反例，以及模型范围和限制。该结果不构成整个实现或 TLS 的完整正确性证明。
+
+## 文件管理扩展与权限
+
+WELCOME、PONG 返回 `access=r|rw`。证书指纹关联账户权限；服务端每次请求重新读取账户。只读拒绝 MKDIR、DELETE、COPY、PUT_INIT、DATA 及上传任务的 RESUME、FINISH；允许取消上传以清理数据。
+
+```mermaid
+sequenceDiagram
+    participant C as 客户端
+    participant S as 服务端
+    C->>S: COPY(source,path)
+    Note over S: 验证 rw、账户目录、配额；复制并校验临时文件，禁止覆盖提交
+    S-->>C: OK / ERROR
+    C->>S: DELETE(path)
+    Note over S: 验证 rw、路径与未结束任务；按目录描述符递归删除
+    S-->>C: OK / ERROR
+```
+
+COPY 复制单个文件；目录复制由客户端通过 LIST、MKDIR、COPY 展开，最多 10000 条目、32 层，部分成功不回滚。DELETE 拒绝根目录和越界路径，递归删除不跟随符号链接；有 active/paused 任务的目标路径拒绝删除。删除成功后释放相应已完成上传的配额。批量操作逐项确认，超限或错误可能留下部分已完成结果。上传及下载的现有 TLA+ 模型未覆盖这些新增文件管理消息与权限配置。
+
+`WELCOME` 和 `PONG` 中 `bandwidth=0` 明确表示账户不限速，客户端显示“不限速”；正值表示每秒字节上限。

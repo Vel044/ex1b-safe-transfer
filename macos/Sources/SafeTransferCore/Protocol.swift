@@ -35,6 +35,7 @@ public enum WireValue: Codable, Sendable, Equatable {
 
 public enum Message: UInt8, Sendable {
     case hello = 1, welcome = 2, list = 10, listResult = 11, mkdir = 12, ok = 13
+    case delete = 14, copy = 15
     case put = 20, get = 21, ready = 22, data = 23, ack = 24, finish = 25, result = 26, read = 27
     case pause = 30, resume = 31, cancel = 32, ping = 40, pong = 41, error = 255
 }
