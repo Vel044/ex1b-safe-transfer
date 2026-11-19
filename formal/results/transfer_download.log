@@ -1,0 +1,23 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 10 cores with 910MB heap and 64MB offheap memory [pid: 94308] (Mac OS X 27.2.1 aarch64, Homebrew 17.0.17 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /Users/vel/Desktop/学习/软件与系统安全/实验1B/formal/SFT1Transfer.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/Naturals.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module SFT1Transfer
+Starting... (2026-11-19 10:50:22)
+Implied-temporal checking--satisfiability problem has 1 branches.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-19 10:50:22.
+Progress(24) at 2026-11-19 10:50:22: 1,377 states generated, 608 distinct states found, 0 states left on queue.
+Checking temporal properties for the complete state space with 608 total distinct states at (2026-11-19 10:50:22)
+Finished checking temporal properties in 00s at 2026-11-19 10:50:22
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 2.5E-14
+1377 states generated, 608 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 24.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 5 and the 95th percentile is 2).
+Finished in 00s at (2026-11-19 10:50:22)

@@ -26,9 +26,11 @@ def run():
     result_dir.mkdir(exist_ok=True)
     results = []
     for cfg in sorted(FORMAL.glob('*.cfg')):
-        module = 'SFT1Upload' if cfg.stem.startswith('upload') else 'SFT1Download'
+        module = {'upload': 'SFT1Upload', 'download': 'SFT1Download',
+                  'transfer': 'SFT1Transfer'}[cfg.stem.split('_', 1)[0]]
         expected = ('Invariant NoCompletion is violated' if cfg.stem.endswith('completion_witness') else 'Temporal properties were violated' if cfg.stem.endswith('unfair') else
-            {'early_ack':'Invariant AckDurable is violated',
+            {'wrong_reply':'Invariant CorrectPrefix is violated',
+             'early_ack':'Invariant AckDurable is violated',
              'early_finish':'Invariant PublishedIntegrity is violated',
              'duplicate_append':'Invariant Bounds is violated',
              'no_owner':'Invariant Isolation is violated',
@@ -58,12 +60,14 @@ def run():
         ROOT/'server/ex1b/server.py', ROOT/'server/ex1b/storage.py', ROOT/'server/ex1b/database.py',
         ROOT/'macos/Sources/SafeTransferCore/TransferEngine.swift',
         ROOT/'macos/Sources/SafeTransferCore/Disk.swift',
+        ROOT/'macos/Sources/SafeTransferCore/Connection.swift',
         ROOT/'macos/Sources/SafeTransferCore/TaskStore.swift',
         *sorted((ROOT/'tests').glob('test_*.py')), Path(__file__).resolve()]
     report = dict(time=datetime.now(timezone.utc).isoformat(), platform=platform.platform(),
         java=subprocess.run(['java','-version'],capture_output=True,text=True).stderr.strip(),
         tool_url=URL, jar_sha256=hashlib.sha256(raw).hexdigest(),
-        source_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
+        source_commit=(subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
+                       if (ROOT/'.git').exists() else None),
         files_sha256={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in tracked},
         results=results)
     (result_dir/'summary.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')

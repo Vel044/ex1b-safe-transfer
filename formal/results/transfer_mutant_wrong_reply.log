@@ -1,0 +1,73 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 10 cores with 910MB heap and 64MB offheap memory [pid: 94323] (Mac OS X 27.2.1 aarch64, Homebrew 17.0.17 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /Users/vel/Desktop/学习/软件与系统安全/实验1B/formal/SFT1Transfer.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/Naturals.tla
+Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module SFT1Transfer
+Starting... (2026-11-19 10:50:23)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-19 10:50:23.
+Error: Invariant CorrectPrefix is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ pending = [A |-> 0, B |-> 0]
+/\ pos = [A |-> 0, B |-> 0]
+/\ replies = {}
+/\ online = TRUE
+/\ published = {}
+/\ breaks = 0
+/\ calls = {}
+/\ cp = [A |-> 0, B |-> 0]
+/\ disk = [A |-> <<>>, B |-> <<>>]
+
+State 2: <Issue line 19, col 5 to line 24, col 70 of module SFT1Transfer>
+/\ pending = [A |-> 1, B |-> 0]
+/\ pos = [A |-> 0, B |-> 0]
+/\ replies = {}
+/\ online = TRUE
+/\ published = {}
+/\ breaks = 0
+/\ calls = {[id |-> "A", request |-> 1, offset |-> 0, payload |-> "READ"]}
+/\ cp = [A |-> 0, B |-> 0]
+/\ disk = [A |-> <<>>, B |-> <<>>]
+
+State 3: <Issue line 19, col 5 to line 24, col 70 of module SFT1Transfer>
+/\ pending = [A |-> 1, B |-> 2]
+/\ pos = [A |-> 0, B |-> 0]
+/\ replies = {}
+/\ online = TRUE
+/\ published = {}
+/\ breaks = 0
+/\ calls = { [id |-> "A", request |-> 1, offset |-> 0, payload |-> "READ"],
+  [id |-> "B", request |-> 2, offset |-> 0, payload |-> "READ"] }
+/\ cp = [A |-> 0, B |-> 0]
+/\ disk = [A |-> <<>>, B |-> <<>>]
+
+State 4: <Advance line 82, col 15 to line 82, col 58 of module SFT1Transfer>
+/\ pending = [A |-> 1, B |-> 2]
+/\ pos = [A |-> 0, B |-> 0]
+/\ replies = {[request |-> 1, offset |-> 0, payload |-> "A0"]}
+/\ online = TRUE
+/\ published = {}
+/\ breaks = 0
+/\ calls = {[id |-> "B", request |-> 2, offset |-> 0, payload |-> "READ"]}
+/\ cp = [A |-> 0, B |-> 0]
+/\ disk = [A |-> <<>>, B |-> <<>>]
+
+State 5: <Advance line 83, col 15 to line 83, col 58 of module SFT1Transfer>
+/\ pending = [A |-> 1, B |-> 2]
+/\ pos = [A |-> 0, B |-> 0]
+/\ replies = {}
+/\ online = TRUE
+/\ published = {}
+/\ breaks = 0
+/\ calls = {[id |-> "B", request |-> 2, offset |-> 0, payload |-> "READ"]}
+/\ cp = [A |-> 0, B |-> 0]
+/\ disk = [A |-> <<>>, B |-> <<"A0">>]
+
+49 states generated, 28 distinct states found, 13 states left on queue.
+The depth of the complete state graph search is 5.
+The average outdegree of the complete state graph is 2 (minimum is 1, the maximum 5 and the 95th percentile is 5).
+Finished in 00s at (2026-11-19 10:50:23)

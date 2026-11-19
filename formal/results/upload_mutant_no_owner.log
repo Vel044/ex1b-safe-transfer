@@ -1,5 +1,5 @@
 TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
-Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 10 cores with 910MB heap and 64MB offheap memory [pid: 96885] (Mac OS X 27.2.1 aarch64, Homebrew 17.0.17 x86_64, MSBDiskFPSet, DiskStateQueue).
+Running breadth-first search Model-Checking with fp 0 and seed 1 with 1 worker on 10 cores with 910MB heap and 64MB offheap memory [pid: 94431] (Mac OS X 27.2.1 aarch64, Homebrew 17.0.17 x86_64, MSBDiskFPSet, DiskStateQueue).
 Parsing file /Users/vel/Desktop/学习/软件与系统安全/实验1B/formal/SFT1Upload.tla
 Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/Naturals.tla
 Parsing file /private/var/folders/1v/6bpl803d4t1brnvhz4p0b1fw0000gn/T/TLC.tla
@@ -10,9 +10,9 @@ Semantic processing of module Sequences
 Semantic processing of module FiniteSets
 Semantic processing of module TLC
 Semantic processing of module SFT1Upload
-Starting... (2026-11-17 11:34:31)
+Starting... (2026-11-19 10:50:30)
 Computing initial states...
-Finished computing initial states: 1 distinct state generated at 2026-11-17 11:34:31.
+Finished computing initial states: 1 distinct state generated at 2026-11-19 10:50:30.
 Error: Invariant Isolation is violated.
 Error: The behavior up to this point is:
 State 1: <Initial predicate>
@@ -45,4 +45,4 @@ x = ( t1 :>
 
 9 states generated, 6 distinct states found, 4 states left on queue.
 The depth of the complete state graph search is 2.
-Finished in 00s at (2026-11-17 11:34:31)
+Finished in 00s at (2026-11-19 10:50:30)
